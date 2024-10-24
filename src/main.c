@@ -1,13 +1,19 @@
 #include <stdint.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "threads.h"
 #include "UART.h"
 
 void app_main(void) {
+    // Initialize modules
     UART_init();
-    uint8_t len = 13;
-    char* data = "Hello World!\n";
-    while (1) {
-        uart_write_bytes(UART_NUM_0, data, len);
-        vTaskDelay(100);
-    }
+
+    // Spawn threads
+    xTaskCreate(UART_test, "UART_TEST", 2048, NULL, 1, NULL);
+    xTaskCreate(UART_test2, "UART_TEST2", 2048, NULL, 1, NULL);
     
+    // Do nothing!
+    for (;;) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
