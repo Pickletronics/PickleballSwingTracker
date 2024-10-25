@@ -9,11 +9,10 @@ void UART_test(void *args) {
     }
 }
 
-void UART_test2(void *args) {
-    uint8_t len = 18;
-    char* data = "Hello evil World!\n";
-    while (1) {
-        uart_write_bytes(UART_NUM_0, data, len);
-        vTaskDelay(50);
-    }
+void SPI_test(void *args) {
+    while(1){
+        uint8_t who_am_i = LSM6DSL_Read_WHOAMI();
+        ESP_LOGI("LSM6DSL", "WHO_AM_I register: 0x%02X", who_am_i);
+        vTaskDelay(100); 
+    }   
 }
