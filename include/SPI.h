@@ -25,5 +25,9 @@
 
 void SPI_Init(void);
 esp_err_t SPI_Transmit(uint8_t* tx_data, uint8_t* rx_data, size_t len);
+void SPI_Select();
+void SPI_Deselect();
+void SPI_Write(uint8_t *data, size_t length);
+void SPI_Read(uint8_t *data, size_t length);
 
 #endif // SPI_H

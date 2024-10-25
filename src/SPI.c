@@ -15,32 +15,55 @@ static spi_device_handle_t spi_handle;
 void SPI_Init(){
     // Configures the spi bus
     spi_bus_config_t buscfg = {
-    .miso_io_num = PIN_NUM_MISO, 
-    .mosi_io_num = PIN_NUM_MOSI, 
-    .sclk_io_num = PIN_NUM_CLK, 
-    .quadwp_io_num = -1,        
-    .quadhd_io_num = -1,        
-    .max_transfer_sz = 4096     
+        .miso_io_num = PIN_NUM_MISO, 
+        .mosi_io_num = PIN_NUM_MOSI, 
+        .sclk_io_num = PIN_NUM_CLK, 
+        .quadwp_io_num = -1,        
+        .quadhd_io_num = -1,        
+        .max_transfer_sz = 4096     
     };
-    spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
 
-    // Configure the LSM6DSR device for SPI 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 5 * 1000 * 1000, 
-        .mode = 3,                         
-        .spics_io_num = PIN_NUM_CS,         
-        .queue_size = 7
+        .clock_speed_hz = 1000000,              // Set to appropriate frequency
+        .mode = 3,                              // SPI mode 3 for LSM6DSL
+        .spics_io_num = PIN_NUM_CS,         // CS pin
+        .queue_size = 7,                        // Queue size for transactions
     };
-    spi_bus_add_device(SPI2_HOST, &devcfg, &spi_handle);
+
+    esp_err_t ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    if (ret != ESP_OK) {
+        printf("Failed to initialize SPI bus: %s\n", esp_err_to_name(ret));
+    }
+    ret = spi_bus_add_device(SPI2_HOST, &devcfg, &spi_handle);
+    if (ret != ESP_OK) {
+        printf("Failed to add device to SPI bus\n");
+        return;
+    }
+    // Configure Chip Select
+    gpio_set_direction(PIN_NUM_CS, GPIO_MODE_OUTPUT);
+    SPI_Deselect();
 }
 
-esp_err_t SPI_Transmit(uint8_t* tx_data, uint8_t* rx_data, size_t len){
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));
-    t.length = len * 8;            
-    t.tx_buffer = tx_data;
-    t.rx_buffer = rx_data; 
+void SPI_Select(){
+    gpio_set_level(PIN_NUM_CS, 0);
+}
 
-    // Transmit and recieve the data
-    return spi_device_transmit(spi_handle, &t);
+void SPI_Deselect(){
+    gpio_set_level(PIN_NUM_CS, 1);
+}
+
+void SPI_Write(uint8_t *data, size_t length){
+    spi_transaction_t to_write = {
+        .length = length * 8,
+        .tx_buffer = data
+    };
+    spi_device_transmit(spi_handle, &to_write);
+}
+
+void SPI_Read(uint8_t *data, size_t length){
+    spi_transaction_t to_read = {
+        .length = length * 8,
+        .rx_buffer = data
+    };
+    spi_device_transmit(spi_handle, &to_read);
 }
