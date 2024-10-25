@@ -12,7 +12,7 @@
 // Global handle for SPI device
 static spi_device_handle_t spi_handle;
 
-void SPI_Init(){
+esp_err_t SPI_Init(){
     // Configures the spi bus
     spi_bus_config_t buscfg = {
         .miso_io_num = PIN_NUM_MISO, 
@@ -37,33 +37,34 @@ void SPI_Init(){
     ret = spi_bus_add_device(SPI2_HOST, &devcfg, &spi_handle);
     if (ret != ESP_OK) {
         printf("Failed to add device to SPI bus\n");
-        return;
+        return ret;
     }
     // Configure Chip Select
     gpio_set_direction(PIN_NUM_CS, GPIO_MODE_OUTPUT);
     SPI_Deselect();
+    return ret;
 }
 
-void SPI_Select(){
-    gpio_set_level(PIN_NUM_CS, 0);
+esp_err_t SPI_Select(){
+    return gpio_set_level(PIN_NUM_CS, 0);
 }
 
-void SPI_Deselect(){
-    gpio_set_level(PIN_NUM_CS, 1);
+esp_err_t SPI_Deselect(){
+    return gpio_set_level(PIN_NUM_CS, 1);
 }
 
-void SPI_Write(uint8_t *data, size_t length){
+esp_err_t SPI_Write(uint8_t *data, size_t length){
     spi_transaction_t to_write = {
         .length = length * 8,
         .tx_buffer = data
     };
-    spi_device_transmit(spi_handle, &to_write);
+    return spi_device_transmit(spi_handle, &to_write);
 }
 
-void SPI_Read(uint8_t *data, size_t length){
+esp_err_t SPI_Read(uint8_t *data, size_t length){
     spi_transaction_t to_read = {
         .length = length * 8,
         .rx_buffer = data
     };
-    spi_device_transmit(spi_handle, &to_read);
+    return spi_device_transmit(spi_handle, &to_read);
 }

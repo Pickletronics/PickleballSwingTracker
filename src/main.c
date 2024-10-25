@@ -13,9 +13,10 @@ void app_main(void) {
     LSM6DSL_Init(); 
 
     // Spawn threads
-    xTaskCreate(UART_test, "UART_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
-    
+    //xTaskCreate(UART_test, "UART_TEST", 2048, NULL, 1, NULL);
+    //xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
+    xTaskCreate(ACCEL_test, "ACCEL_TEST", 2048, NULL, 1, NULL);
+
     // Do nothing!
     for (;;) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);

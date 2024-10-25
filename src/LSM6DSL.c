@@ -27,3 +27,19 @@ uint8_t LSM6DSL_Read_WHOAMI() {
 
     return WHOAMI_val;  
 }
+
+int16_t read_accel_axis(uint8_t reg_low, uint8_t reg_high) {
+    uint8_t low, high;
+
+    SPI_Select();
+    //get data from low byte register
+    SPI_Write(&reg_low, 1);
+    SPI_Read(&low, 1);
+    //get data from high byte register
+    SPI_Write(&reg_high, 1);
+    SPI_Read(&high, 1);
+    SPI_Deselect();
+
+    //return the data as one SIGNED 16 bit integer
+    return (int16_t)((high << 8) | low);
+}
