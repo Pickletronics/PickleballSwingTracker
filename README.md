@@ -6,6 +6,7 @@ Completed Work:
 - FreeRTOS: Integrated FreeRTOS into our project and created multiple threads that can run simulataneously. 
   
 Project Architecture:
+
 The project architecture is straightforward at this point. We have header and source files for the drivers we have completed so far, and are leveraging various drivers that platform.io provides. The directory structure is as follows: 
 - include: houses the header files for SPI, UART, threads, the LSM6DSL, and will house any future header files. 
 - lib: will house any libraries that we include in our project.
