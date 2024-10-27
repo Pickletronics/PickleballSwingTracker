@@ -14,3 +14,7 @@ void UART_init() {
     ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0, 1024 * 2, 0, 0, NULL, intr_alloc_flags));
     ESP_ERROR_CHECK(uart_param_config(UART_NUM_0, &uart_config));
 }
+
+void UART_write(const void* src, size_t size) {
+    uart_write_bytes(UART_NUM, src, size);
+}
