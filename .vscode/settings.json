@@ -3,6 +3,10 @@
         "uart.h": "c",
         "stdint.h": "c",
         "freertos.h": "c",
-        "threads.h": "c"
+        "threads.h": "c",
+        "cstdint": "cpp",
+        "lsm6dsl.h": "c",
+        "mpu9250.h": "c",
+        "spi.h": "c"
     }
 }
