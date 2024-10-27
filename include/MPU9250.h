@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include "SPI.h"
+#include "UART.h"
 
 /************************************Includes***************************************/
 
@@ -26,6 +27,14 @@
 #define ACCEL_YL                62
 #define ACCEL_ZH                63
 #define ACCEL_ZL                64
+
+#define GYRO_CFG               27
+#define GYRO_XH                67
+#define GYRO_XL                68
+#define GYRO_YH                69
+#define GYRO_YL                70
+#define GYRO_ZH                71
+#define GYRO_ZL                72
 
 /*************************************Defines***************************************/
 
@@ -63,7 +72,12 @@ void MPU9250_Init(void);
 void MPU9250_write(uint8_t reg, uint8_t val);
 uint8_t MPU9250_read(uint8_t reg);
 uint8_t MPU9250_read_WHOAMI();
-void MPU9250_update(MPU9250_handle_t* mpu);
+void MPU9250_update();
+
+// PLOT FUNC SERIAL MONITOR SETTINGS:
+    // - 3 channels, Simple Binary, int16, Little Endian
+void MPU9250_plot_accel();
+void MPU9250_plot_gyro();
 
 /********************************Public Functions***********************************/
 

@@ -11,7 +11,8 @@ void app_main(void) {
 
     // Spawn threads
     // xTaskCreate(UART_test, "UART_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
+    // xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
+    xTaskCreate(Serial_Plot, "Serial_Plot", 2048, NULL, 1, NULL);
 
     // Do nothing!
     for (;;) {

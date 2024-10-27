@@ -9,7 +9,7 @@
 /********************************Public Variables***********************************/
 
 // Global handle for MPU9250
-MPU9250_handle_t MPU9250;
+MPU9250_handle_t mpu;
 
 /********************************Public Variables***********************************/
 
@@ -49,6 +49,10 @@ void MPU9250_Init() {
     // filtering - cfg 2
 
     /* initialize gyro */
+    temp = MPU9250_read(GYRO_CFG);
+    temp |= 0x08; // +/- 500 dps
+    MPU9250_write(GYRO_CFG, temp);
+    temp = 0;
 
     /* initialize mag */
 }
@@ -78,11 +82,48 @@ uint8_t MPU9250_read_WHOAMI() {
     return MPU9250_read(MPU9250_WHOAMI);  
 }
 
-void MPU9250_update(MPU9250_handle_t* mpu) {
+void MPU9250_update() {
     // read acccel x, y, z
-    mpu->accel.x = (MPU9250_read(ACCEL_XH) << 8) | MPU9250_read(ACCEL_XL);
-    mpu->accel.y = (MPU9250_read(ACCEL_YH) << 8) | MPU9250_read(ACCEL_YL);
-    mpu->accel.z = (MPU9250_read(ACCEL_ZH) << 8) | MPU9250_read(ACCEL_ZL);
+    mpu.accel.x = (MPU9250_read(ACCEL_XH) << 8) | MPU9250_read(ACCEL_XL);
+    mpu.accel.y = (MPU9250_read(ACCEL_YH) << 8) | MPU9250_read(ACCEL_YL);
+    mpu.accel.z = (MPU9250_read(ACCEL_ZH) << 8) | MPU9250_read(ACCEL_ZL);
+
+    // read gyro x, y, z
+    mpu.gyro.x = (MPU9250_read(GYRO_XH) << 8) | MPU9250_read(GYRO_XL);
+    mpu.gyro.y = (MPU9250_read(GYRO_YH) << 8) | MPU9250_read(GYRO_YL);
+    mpu.gyro.z = (MPU9250_read(GYRO_ZH) << 8) | MPU9250_read(GYRO_ZL);
+}
+
+void MPU9250_plot_accel() {
+    MPU9250_update();
+
+    // output data over uart
+    char accel[6] = {
+        (mpu.accel.x >> 8) & 0xFF,
+        (mpu.accel.x) & 0xFF,
+        (mpu.accel.y >> 8) & 0xFF,
+        (mpu.accel.y) & 0xFF,
+        (mpu.accel.z >> 8) & 0xFF,
+        (mpu.accel.z) & 0xFF,
+    };
+
+    UART_write(accel, 6);
+}
+
+void MPU9250_plot_gyro() {
+    MPU9250_update();
+
+    // output data over uart
+    char gyro[6] = {
+        (mpu.gyro.x >> 8) & 0xFF,
+        (mpu.gyro.x) & 0xFF,
+        (mpu.gyro.y >> 8) & 0xFF,
+        (mpu.gyro.y) & 0xFF,
+        (mpu.gyro.z >> 8) & 0xFF,
+        (mpu.gyro.z) & 0xFF,
+    };
+
+    UART_write(gyro, 6);
 }
 
 /********************************Public Functions***********************************/
