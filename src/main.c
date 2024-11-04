@@ -1,9 +1,19 @@
+// main.c
+
+/************************************Includes***************************************/
+
 #include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "threads.h"
 
+/************************************Includes***************************************/
+
+/********************************Public Variables***********************************/
+
 SemaphoreHandle_t SPI_sem;
+
+/********************************Public Variables***********************************/
 
 /* Main */
 /// Used to initialize peripherals and spawn threads
