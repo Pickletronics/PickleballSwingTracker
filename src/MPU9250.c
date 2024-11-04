@@ -94,36 +94,46 @@ void MPU9250_update() {
     mpu.gyro.z = (MPU9250_read(GYRO_ZH) << 8) | MPU9250_read(GYRO_ZL);
 }
 
+/********************************Public Functions***********************************/
+
+/**********************************Test Threads*************************************/
+
 void MPU9250_plot_accel() {
-    MPU9250_update();
+    while(1) {
+        MPU9250_update();
 
-    // output data over uart
-    char accel[6] = {
-        (mpu.accel.x >> 8) & 0xFF,
-        (mpu.accel.x) & 0xFF,
-        (mpu.accel.y >> 8) & 0xFF,
-        (mpu.accel.y) & 0xFF,
-        (mpu.accel.z >> 8) & 0xFF,
-        (mpu.accel.z) & 0xFF,
-    };
+        // output data over uart
+        char accel[6] = {
+            (mpu.accel.x >> 8) & 0xFF,
+            (mpu.accel.x) & 0xFF,
+            (mpu.accel.y >> 8) & 0xFF,
+            (mpu.accel.y) & 0xFF,
+            (mpu.accel.z >> 8) & 0xFF,
+            (mpu.accel.z) & 0xFF,
+        };
 
-    UART_write(accel, 6);
+        UART_write(accel, 6);
+        vTaskDelay(1);
+    }
 }
 
 void MPU9250_plot_gyro() {
-    MPU9250_update();
+    while(1) {
+        MPU9250_update();
 
-    // output data over uart
-    char gyro[6] = {
-        (mpu.gyro.x >> 8) & 0xFF,
-        (mpu.gyro.x) & 0xFF,
-        (mpu.gyro.y >> 8) & 0xFF,
-        (mpu.gyro.y) & 0xFF,
-        (mpu.gyro.z >> 8) & 0xFF,
-        (mpu.gyro.z) & 0xFF,
-    };
+        // output data over uart
+        char gyro[6] = {
+            (mpu.gyro.x >> 8) & 0xFF,
+            (mpu.gyro.x) & 0xFF,
+            (mpu.gyro.y >> 8) & 0xFF,
+            (mpu.gyro.y) & 0xFF,
+            (mpu.gyro.z >> 8) & 0xFF,
+            (mpu.gyro.z) & 0xFF,
+        };
 
-    UART_write(gyro, 6);
+        UART_write(gyro, 6);
+        vTaskDelay(1);
+    }
 }
 
-/********************************Public Functions***********************************/
+/**********************************Test Threads*************************************/
