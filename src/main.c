@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "threads.h"
+#include "BLE.h"
 
 /************************************Includes***************************************/
 
@@ -23,6 +24,7 @@ void app_main(void) {
     UART_init();
     SPI_Init(); 
     MPU9250_Init();
+    BLE_Start(); 
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();

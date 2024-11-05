@@ -5,7 +5,7 @@
 
 /************************************Includes***************************************/
 
-#include "driver/gpio.h"
+#include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_nimble_hci.h"
@@ -18,6 +18,10 @@
 /************************************Includes***************************************/
 
 /*************************************Defines***************************************/
+
+#define DEVICE_UUID         0x0180
+#define READ_UUID           0xFEF4
+
 /*************************************Defines***************************************/
 
 /***********************************Externs*****************************************/
@@ -25,7 +29,13 @@
 
 /********************************Public Functions***********************************/
 
-esp_err_t BLE_Init(void);
+void BLE_Start(void);
+int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg); 
+void BLE_Advertise(void); 
+int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg);
+void BLE_Sync(void);
+void BLE_Launch(void *param); 
+void BLE_Stop(void); 
 
 /********************************Public Functions***********************************/
 
