@@ -19,7 +19,10 @@
 
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
-extern SemaphoreHandle_t BTN_sem;
+extern SemaphoreHandle_t Button_sem;
+
+// FIXME: Would rather include function's header file
+extern int esp_clk_cpu_freq();
 
 /***********************************Externs*****************************************/
 
@@ -30,10 +33,14 @@ extern SemaphoreHandle_t BTN_sem;
 
 void SEM_test(void *args);
 void SPI_test(void *args); 
-void BTN_test(void *args);
-
-void IRAM_ATTR buttonISR();
+void Button_task(void *args);
 
 /********************************Public Functions***********************************/
+
+/****************************Interrupt Service Routines*****************************/
+
+void Button_ISR();
+
+/****************************Interrupt Service Routines*****************************/
 
 #endif // THREADS_H

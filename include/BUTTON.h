@@ -1,15 +1,14 @@
-// BUTTON.h
+// button.h
 
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-#include "freertos/semphr.h"
-#include "freertos/FreeRTOS.h"
-#include <stdint.h>
 #include "driver/gpio.h"
+#include <stdint.h>
 
-#define BUTTON_PIN GPIO_NUM_22
+#define BUTTON_PIN      GPIO_NUM_34
 
 void Button_Init();
+int Button_Read();
 
 #endif // BUTTON_H
