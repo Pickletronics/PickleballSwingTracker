@@ -65,4 +65,20 @@ void SPI_test(void *args) {
     }   
 }
 
+void BTN_test(void *args) {
+    while (1){
+        if (xSemaphoreTake(BTN_sem, portMAX_DELAY) == pdTRUE) {
+            printf("farty mcBalls face");
+        }
+    }
+}
+
 /***********************************Test Threads************************************/
+
+/****************************Interrupt Service Routines*****************************/
+
+void IRAM_ATTR buttonISR() {
+    xSemaphoreGiveFromISR(BTN_sem, NULL);
+}
+
+/****************************Interrupt Service Routines*****************************/
