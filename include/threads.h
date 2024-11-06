@@ -8,6 +8,7 @@
 #include "UART.h"
 #include "SPI.h"
 #include "MPU9250.h"
+#include "BUTTON.h"
 
 /************************************Includes***************************************/
 
@@ -18,6 +19,10 @@
 
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
+extern SemaphoreHandle_t Button_sem;
+
+// FIXME: Would rather include function's header file
+extern int esp_clk_cpu_freq();
 
 /***********************************Externs*****************************************/
 
@@ -28,7 +33,14 @@ extern SemaphoreHandle_t SPI_sem;
 
 void SEM_test(void *args);
 void SPI_test(void *args); 
+void Button_task(void *args);
 
 /********************************Public Functions***********************************/
+
+/****************************Interrupt Service Routines*****************************/
+
+void Button_ISR();
+
+/****************************Interrupt Service Routines*****************************/
 
 #endif // THREADS_H
