@@ -13,6 +13,7 @@
 /********************************Public Variables***********************************/
 
 SemaphoreHandle_t SPI_sem;
+QueueHandle_t data_queue; 
 
 /********************************Public Variables***********************************/
 
@@ -28,6 +29,7 @@ void app_main(void) {
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
+    data_queue = xQueueCreate(3, sizeof(int16_t));
 
     // Spawn threads
     xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);

@@ -34,9 +34,8 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
 void BLE_Advertise(void); 
 int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg);
 void BLE_Sync(void);
-void BLE_Launch(void *param); 
-void BLE_Stop(void); 
-
+void BLE_Launch(void *param);
+ 
 /********************************Public Functions***********************************/
 
 #endif // BLE_H

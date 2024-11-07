@@ -3,6 +3,7 @@
 /************************************Includes***************************************/
 
 #include "BLE.h"
+#include "threads.h"
 
 /************************************Includes***************************************/
 
@@ -30,10 +31,6 @@ void BLE_Start(){
 
     // Initialize necessary modules 
     nvs_flash_init();                          // 1 - Initialize NVS flash using
-    // esp_bt_controller_init(); 
-    // esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    // esp_nimble_hci_init();
-    //esp_nimble_hci_and_controller_init();      // 2 - Initialize ESP controller
     nimble_port_init();                        // 3 - Initialize the host stack
     
     // Set up GAP and GATT services 
@@ -54,9 +51,18 @@ void BLE_Start(){
 // one characteristic, and aren't passing in extra args right now. 
 // Need these parameters to be compliant with the NimBLE API. 
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg){
-    // Will replace with sensor data later- probably passed in through args
-    // For now, just transmit a string 
-    os_mbuf_append(ctxt->om, "Hello World!", strlen("Hello World!"));
+    // Create buffer for data 
+    int16_t data[3];
+    int i = 0;
+
+    // Read items in the queue 
+    while( i < 3 && xQueueReceive(data_queue, &data[i], 0) == pdTRUE){
+        printf("Accel val from queue = %d\n", data[i]);
+
+        // Append the data to the ble buffer
+        os_mbuf_append(ctxt->om, &data[i], sizeof(data[i]));
+        i++;
+    }
     
     return 0; 
 }
@@ -95,8 +101,8 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
         break; 
 
     case BLE_GAP_EVENT_DISCONNECT: 
-        printf("Connection terminated. Resume Advertising."); 
-        BLE_Advertise(); 
+        printf("Connection terminated. Ending bluetooth session."); 
+        nimble_port_stop(); 
         break;
 
     // Advertise again after completion 
@@ -119,9 +125,5 @@ void BLE_Sync(){
 void BLE_Launch(void *param){
     nimble_port_run(); 
 }
-
-void BLE_Stop(){
-    nimble_port_stop(); 
-} 
 
 /********************************Public Functions***********************************/
