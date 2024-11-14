@@ -1,4 +1,4 @@
-// button_SPI.c
+// button.c
 
 /************************************Includes***************************************/
 
@@ -9,6 +9,7 @@
 
 /********************************Public Variables***********************************/
 
+gptimer_handle_t button_timer;
 
 /********************************Public Variables***********************************/
 
@@ -43,10 +44,33 @@ void Button_Init() {
         // Handle error if ISR handler fails to add
         printf("Failed to add ISR handler: %s\n", esp_err_to_name(ret));
     }
+
+    // Initialize the Timer/Counter for the Button
+    Button_Timer_Init();
 }
 
 int Button_Read() {
     return gpio_get_level(BUTTON_PIN);
+}
+
+void Button_Timer_Init(){
+    // Configure the Timer/Counter for button press detection timing
+    gptimer_config_t tc_conf;
+    tc_conf.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+    tc_conf.direction = GPTIMER_COUNT_UP;
+    tc_conf.resolution_hz = 1000000;
+    gptimer_new_timer(&tc_conf, &button_timer);
+
+    gptimer_alarm_config_t alarm_config;
+    alarm_config.alarm_count = HOLD_THRESHOLD * 1000;
+    alarm_config.reload_count = 0;
+    alarm_config.flags.auto_reload_on_alarm = false;
+    gptimer_set_alarm_action(button_timer, &alarm_config);
+
+    gptimer_event_callbacks_t cbs;
+    cbs.on_alarm = Button_Timer_ISR;
+    gptimer_register_event_callbacks(button_timer, &cbs, NULL);
+    gptimer_enable(button_timer);
 }
 
 /********************************Public Functions***********************************/

@@ -9,6 +9,8 @@
 /********************************Public Variables***********************************/
 
 bool SPI_prints = true;
+volatile uint8_t num_presses = 0;
+volatile bool hold_detected = false;
 
 /********************************Public Variables***********************************/
 
@@ -83,69 +85,18 @@ void SPI_test(void *args) {
 }
 
 void Button_task(void *args) {
-    const TickType_t multipress_time_threshold = pdMS_TO_TICKS(400);
-    const TickType_t hold_time_threshold = pdMS_TO_TICKS(600);
-    const TickType_t debounce_time = pdMS_TO_TICKS(30);
-    TickType_t current_time, prev_press_time;
-    bool hold_detected = false;
-    int num_presses = 0;
-    int button_val;
-
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
-
-            // capture start time of press
-            prev_press_time = xTaskGetTickCount();
-            current_time = prev_press_time;
-
-            // poll to detect number of presses
-            while (current_time - prev_press_time < multipress_time_threshold) {
-                
-                // update current time
-                current_time = xTaskGetTickCount();
-
-                // delay to debounce
-                vTaskDelay(debounce_time);
-
-                // read button
-                button_val = Button_Read();
-                if (!button_val) {
-                    prev_press_time = current_time;
-                    num_presses++;
-
-                    // wait for button to be released or detect hold
-                    while(!Button_Read()) {
-                        // update current time
-                        current_time = xTaskGetTickCount();
-
-                        // check for hold and break if holding threshold passed
-                        if (current_time - prev_press_time > hold_time_threshold) {
-                            hold_detected = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Handle result
             if (hold_detected) {
-                printf("Hold detected!\n");
-
-                // toggle SPI prints
-                SPI_prints = !SPI_prints;
+                printf("Hold detected; ignoring further presses.\n");
+                continue;  // Skip further processing if a hold is detected
             }
-            else {
-                printf("Number of presses detected: %d\n", num_presses);
-            }
-            
-            // reset relevant variables
-            hold_detected = false;
-            num_presses = 0;
 
-            // re-enable button interrupt
-            gpio_intr_enable(BUTTON_PIN);
+            // Check if the timer interrupt signaled end of a press sequence
+            printf("Number of presses detected: %d\n", num_presses);
+            num_presses = 0;  // Reset press counter
+            gpio_intr_enable(BUTTON_PIN);  // Re-enable button interrupt
         }
-        else {}
     }
 }
 
@@ -154,11 +105,31 @@ void Button_task(void *args) {
 /****************************Interrupt Service Routines*****************************/
 
 void Button_ISR() {
-    // Disable the GPIO interrupt for the button
-    gpio_intr_disable(BUTTON_PIN);
+    if (!hold_detected)
+    {
+        // Disable the GPIO interrupt for the button
+        gpio_intr_disable(BUTTON_PIN);
 
+        // Increment global button press counter
+        num_presses++;
+
+        // Restart the timer
+        gptimer_stop(button_timer);
+        gptimer_set_raw_count(button_timer, 0);
+        gptimer_start(button_timer);
+
+        // Give the semaphore to notify button task
+        xSemaphoreGiveFromISR(Button_sem, NULL);
+    }
+}
+
+bool Button_Timer_ISR(){
+    // Disable the interrupt
+    gptimer_stop(button_timer);    
     // Give the semaphore to notify button task
     xSemaphoreGiveFromISR(Button_sem, NULL);
+
+    return true;
 }
 
 /****************************Interrupt Service Routines*****************************/
