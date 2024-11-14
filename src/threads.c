@@ -7,18 +7,18 @@
 /************************************Includes***************************************/
 
 /********************************Public Variables***********************************/
+
+bool SPI_prints = true;
+
 /********************************Public Variables***********************************/
 
 /********************************Public Functions***********************************/
-/********************************Public Functions***********************************/
-
-/***********************************Test Threads************************************/
 
 void SEM_test(void *args) {
     TickType_t start, end;
 
     while (1) {
-        if (xSemaphoreTake(SPI_sem, 0)) {
+        if (xSemaphoreTake(SPI_sem, 0) == pdTRUE) {
             start = xTaskGetTickCount();
 
             // simulate variable work
@@ -28,7 +28,8 @@ void SEM_test(void *args) {
             xSemaphoreGive(SPI_sem);
             end = xTaskGetTickCount();
 
-            printf("\nSemaphore held for %.2f seconds\n", ((float)(end-start))/configTICK_RATE_HZ);
+            if (SPI_prints)
+                printf("\nSemaphore held for %.2f seconds\n", ((float)(end-start))/configTICK_RATE_HZ);
         }
         else {}
 
@@ -37,13 +38,14 @@ void SEM_test(void *args) {
 }
 
 void SPI_test(void *args) {
+    uint8_t who_am_i;
+
     while(1){
         // try to acquire semaphore for 10 ticks
-        if (xSemaphoreTake(SPI_sem, 10)) {
+        if (xSemaphoreTake(SPI_sem, 10) == pdTRUE) {
 
             // read MPU9250 over SPI
-            printf("\n");
-            printf("Who Am I: 0x%02X\n", MPU9250_read_WHOAMI());
+            who_am_i = MPU9250_read_WHOAMI();
             MPU9250_update();
 
             // release semaphore
@@ -61,14 +63,18 @@ void SPI_test(void *args) {
             }
 
             // print data
-            printf("\n");
-            printf("Accel.x = %d\n", mpu.accel.x);
-            printf("Accel.y = %d\n", mpu.accel.y);
-            printf("Accel.z = %d\n", mpu.accel.z);
-            printf("\n");
-            printf("Gyro.x = %d\n", mpu.gyro.x);
-            printf("Gyro.y = %d\n", mpu.gyro.y);
-            printf("Gyro.z = %d\n", mpu.gyro.z);
+            if (SPI_prints) {
+                printf("\n");
+                printf("Who Am I: 0x%02X\n", who_am_i);
+                printf("\n");
+                printf("Accel.x = %d\n", mpu.accel.x);
+                printf("Accel.y = %d\n", mpu.accel.y);
+                printf("Accel.z = %d\n", mpu.accel.z);
+                printf("\n");
+                printf("Gyro.x = %d\n", mpu.gyro.x);
+                printf("Gyro.y = %d\n", mpu.gyro.y);
+                printf("Gyro.z = %d\n", mpu.gyro.z);
+            }
         }
         else {}
 
@@ -76,4 +82,83 @@ void SPI_test(void *args) {
     }   
 }
 
-/***********************************Test Threads************************************/
+void Button_task(void *args) {
+    const TickType_t multipress_time_threshold = pdMS_TO_TICKS(400);
+    const TickType_t hold_time_threshold = pdMS_TO_TICKS(600);
+    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    TickType_t current_time, prev_press_time;
+    bool hold_detected = false;
+    int num_presses = 0;
+    int button_val;
+
+    while (1) {
+        if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
+
+            // capture start time of press
+            prev_press_time = xTaskGetTickCount();
+            current_time = prev_press_time;
+
+            // poll to detect number of presses
+            while (current_time - prev_press_time < multipress_time_threshold) {
+                
+                // update current time
+                current_time = xTaskGetTickCount();
+
+                // delay to debounce
+                vTaskDelay(debounce_time);
+
+                // read button
+                button_val = Button_Read();
+                if (!button_val) {
+                    prev_press_time = current_time;
+                    num_presses++;
+
+                    // wait for button to be released or detect hold
+                    while(!Button_Read()) {
+                        // update current time
+                        current_time = xTaskGetTickCount();
+
+                        // check for hold and break if holding threshold passed
+                        if (current_time - prev_press_time > hold_time_threshold) {
+                            hold_detected = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Handle result
+            if (hold_detected) {
+                printf("Hold detected!\n");
+
+                // toggle SPI prints
+                SPI_prints = !SPI_prints;
+            }
+            else {
+                printf("Number of presses detected: %d\n", num_presses);
+            }
+            
+            // reset relevant variables
+            hold_detected = false;
+            num_presses = 0;
+
+            // re-enable button interrupt
+            gpio_intr_enable(BUTTON_PIN);
+        }
+        else {}
+    }
+}
+
+/********************************Public Functions***********************************/
+
+/****************************Interrupt Service Routines*****************************/
+
+void Button_ISR() {
+    // Disable the GPIO interrupt for the button
+    gpio_intr_disable(BUTTON_PIN);
+
+    // Give the semaphore to notify button task
+    xSemaphoreGiveFromISR(Button_sem, NULL);
+}
+
+/****************************Interrupt Service Routines*****************************/
