@@ -51,6 +51,17 @@ void SPI_test(void *args) {
             // release semaphore
             xSemaphoreGive(SPI_sem);
 
+            // Send data to the BLE data queue 
+            if (xQueueSend(data_queue, &mpu.accel.x, 10) != pdPASS) {
+                printf("Failed to send accel.x to queue\n");
+            }
+            if (xQueueSend(data_queue, &mpu.accel.y, 10) != pdPASS) {
+                printf("Failed to send accel.y to queue\n");
+            }
+            if (xQueueSend(data_queue, &mpu.accel.z, 10) != pdPASS) {
+                printf("Failed to send accel.z to queue\n");
+            }
+
             // print data
             if (SPI_prints) {
                 printf("\n");

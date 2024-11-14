@@ -6,12 +6,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "threads.h"
+#include "BLE.h"
 
 /************************************Includes***************************************/
 
 /********************************Public Variables***********************************/
 
 SemaphoreHandle_t SPI_sem;
+QueueHandle_t data_queue; 
 SemaphoreHandle_t Button_sem;
 
 /********************************Public Variables***********************************/
@@ -25,9 +27,11 @@ void app_main(void) {
     UART_init();
     Button_Init();
     MPU9250_Init();
+    BLE_Start(); 
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
+    data_queue = xQueueCreate(9, sizeof(int16_t));
     Button_sem = xSemaphoreCreateBinary();
 
     // Spawn threads
