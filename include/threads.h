@@ -8,7 +8,8 @@
 #include "UART.h"
 #include "SPI.h"
 #include "MPU9250.h"
-#include "BUTTON.h"
+#include "button.h"
+#include "BLE.h"
 
 /************************************Includes***************************************/
 
