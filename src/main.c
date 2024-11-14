@@ -29,7 +29,7 @@ void app_main(void) {
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
-    data_queue = xQueueCreate(3, sizeof(int16_t));
+    data_queue = xQueueCreate(9, sizeof(int16_t));
 
     // Spawn threads
     xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);

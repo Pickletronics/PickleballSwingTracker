@@ -11,7 +11,6 @@
 
 char *TAG = "BLE-Server";
 uint8_t ble_addr_type;
-// const uint16_t DEVICE_UUID = 0x180;
 
 static const struct ble_gatt_svc_def gatt_svcs[] = {
     {.type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -106,10 +105,10 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
         break;
 
     // Advertise again after completion 
-    case BLE_GAP_EVENT_ADV_COMPLETE: 
-        printf("Advertising event complete. Advertising again."); 
-        BLE_Advertise(); 
-        break; 
+    // case BLE_GAP_EVENT_ADV_COMPLETE: 
+    //     printf("Advertising event complete. Advertising again."); 
+    //     BLE_Advertise(); 
+    //     break; 
 
     default: 
         break; 
