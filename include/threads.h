@@ -19,6 +19,7 @@
 
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
+extern QueueHandle_t data_queue; 
 extern SemaphoreHandle_t Button_sem;
 
 // FIXME: Would rather include function's header file
