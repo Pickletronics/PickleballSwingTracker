@@ -8,7 +8,6 @@
 #include <stdint.h>
 
 #define BUTTON_PIN      GPIO_NUM_34
-#define HOLD_THRESHOLD  200
 
 extern gptimer_handle_t button_timer;
 

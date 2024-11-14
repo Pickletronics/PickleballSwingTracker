@@ -62,7 +62,7 @@ void Button_Timer_Init(){
     gptimer_new_timer(&tc_conf, &button_timer);
 
     gptimer_alarm_config_t alarm_config;
-    alarm_config.alarm_count = HOLD_THRESHOLD * 1000;
+    alarm_config.alarm_count = pdMS_TO_TICKS(600);
     alarm_config.reload_count = 0;
     alarm_config.flags.auto_reload_on_alarm = false;
     gptimer_set_alarm_action(button_timer, &alarm_config);

@@ -41,7 +41,7 @@ void Button_task(void *args);
 /****************************Interrupt Service Routines*****************************/
 
 void Button_ISR();
-bool Button_Timer_ISR();
+void Button_Timer_ISR();
 
 /****************************Interrupt Service Routines*****************************/
 

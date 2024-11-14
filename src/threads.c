@@ -85,16 +85,39 @@ void SPI_test(void *args) {
 }
 
 void Button_task(void *args) {
+
+    TickType_t curr_time, press_time;
+    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    const TickType_t hold_threshold = pdMS_TO_TICKS(600);
+
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
-            if (hold_detected) {
-                printf("Hold detected; ignoring further presses.\n");
-                continue;  // Skip further processing if a hold is detected
-            }
+            // Debounce button press
+            vTaskDelay(debounce_time);
 
-            // Check if the timer interrupt signaled end of a press sequence
-            printf("Number of presses detected: %d\n", num_presses);
-            num_presses = 0;  // Reset press counter
+            // Pause timer
+            gptimer_stop(button_timer);
+
+            // Set start time
+            press_time = xTaskGetTickCount();
+            curr_time = press_time;
+
+            while (!Button_Read())
+            {
+                if (curr_time - press_time > hold_threshold) {
+                    hold_detected = true;
+                    break;
+                }
+                curr_time = xTaskGetTickCount();
+            }
+            
+            // Increment global button press counter
+            num_presses++;
+
+            // Restart the timer
+            gptimer_set_raw_count(button_timer, 0);
+            gptimer_start(button_timer);
+
             gpio_intr_enable(BUTTON_PIN);  // Re-enable button interrupt
         }
     }
@@ -109,27 +132,17 @@ void Button_ISR() {
     {
         // Disable the GPIO interrupt for the button
         gpio_intr_disable(BUTTON_PIN);
-
-        // Increment global button press counter
-        num_presses++;
-
-        // Restart the timer
-        gptimer_stop(button_timer);
-        gptimer_set_raw_count(button_timer, 0);
-        gptimer_start(button_timer);
-
         // Give the semaphore to notify button task
         xSemaphoreGiveFromISR(Button_sem, NULL);
     }
 }
 
-bool Button_Timer_ISR(){
-    // Disable the interrupt
-    gptimer_stop(button_timer);    
-    // Give the semaphore to notify button task
-    xSemaphoreGiveFromISR(Button_sem, NULL);
+void Button_Timer_ISR(){
+    // Stop the timer and reset
+    gptimer_stop(button_timer);  
+    gptimer_set_raw_count(button_timer, 0);
 
-    return true;
+    printf("Number of presses detected: %d", num_presses);
 }
 
 /****************************Interrupt Service Routines*****************************/
