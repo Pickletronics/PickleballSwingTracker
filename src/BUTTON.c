@@ -9,7 +9,10 @@
 
 /********************************Public Variables***********************************/
 
-timer_isr_handle_t button_timer;
+gptimer_handle_t Button_timer;
+volatile bool timer_trig = false;
+extern uint8_t num_presses;
+extern bool hold_detected;
 
 /********************************Public Variables***********************************/
 
@@ -55,17 +58,34 @@ int Button_Read() {
 
 void Button_Timer_Init(){
     // Configure the Timer/Counter for button press detection timing
-    timer_config_t config = {
-        .divider = 80,                   // 1 microsecond per tick (80 MHz APB clock)
-        .counter_dir = TIMER_COUNT_UP,
-        .counter_en = TIMER_START,
-        .alarm_en = TIMER_ALARM_EN,
-        .auto_reload = true,
-        .intr_type = TIMER_INTR_LEVEL,
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_RES, 
     };
-    timer_init(TIMER_GROUP_0, TIMER_0, &config);
-    timer_enable_intr(TIMER_GROUP_0, TIMER_0);
-    timer_isr_register(TIMER_GROUP_0, TIMER_0, Button_Timer_ISR, NULL, ESP_INTR_FLAG_LEVEL1, &button_timer);
+    gptimer_new_timer(&timer_config, &Button_timer);
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = Button_Timer_Callback,
+    };
+    gptimer_register_event_callbacks(Button_timer, &cbs, NULL);
+
+    gptimer_enable(Button_timer);
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = ALARM_COUNT,
+        // .reload_count = 0,
+        // .flags.auto_reload_on_alarm = false,
+    };
+    gptimer_set_alarm_action(Button_timer, &alarm_config);
+}
+
+bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_data){
+    
+    timer_trig = true;
+    // gptimer_disable(Button_timer);
+    
+    return true;
 }
 
 /********************************Public Functions***********************************/

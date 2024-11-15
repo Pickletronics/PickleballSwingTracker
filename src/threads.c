@@ -9,8 +9,9 @@
 /********************************Public Variables***********************************/
 
 bool SPI_prints = true;
-volatile uint8_t num_presses = 0;
 volatile bool hold_detected = false;
+volatile uint8_t num_presses = 0;
+extern bool timer_trig;
 
 /********************************Public Variables***********************************/
 
@@ -91,11 +92,17 @@ void Button_task(void *args) {
 
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
+            printf("entered task\n");
+            // gptimer_disable(Button_timer);
+            
             // Debounce button press
+            printf("debouncing\n");
             vTaskDelay(debounce_time);
-            timer_pause(TIMER_GROUP_0, TIMER_0);
             press_time = xTaskGetTickCount();
             curr_time = press_time;
+
+
+            printf("hold check\n");
 
             while (!Button_Read())
             {                
@@ -106,18 +113,43 @@ void Button_task(void *args) {
                 curr_time = xTaskGetTickCount();
             }
             
+            printf("incrementing counter\n");
             // Increment press counter
             num_presses++;
-            hold_detected = false;
 
-            // Reset timer
-            timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-            timer_start(TIMER_GROUP_0, TIMER_0);
+            // Restart the timer
+            if (num_presses == 0)
+            {
+                gptimer_enable(Button_timer);
+            }
+            
+            gptimer_set_raw_count(Button_timer, 0);
+            gptimer_start(Button_timer);
+            printf("timer reset!\n");
+
+            // Enable button interrupts
             gpio_intr_enable(BUTTON_PIN);
         }
     }
 }
 
+void Timer_test(void *args){
+    while (true)
+    {
+        if (timer_trig) {
+            if (!hold_detected)
+            {
+                printf("Number of presses detected: %d\n", num_presses);
+            } else {
+                printf("Hold detected\n");
+            }
+            timer_trig = false;
+            hold_detected = false;
+            num_presses = 0;
+        }
+        vTaskDelay(5);
+    }       
+}
 
 /********************************Public Functions***********************************/
 
@@ -131,14 +163,6 @@ void Button_ISR() {
         // Give the semaphore to notify button task
         xSemaphoreGiveFromISR(Button_sem, NULL);
     }
-}
-
-void Button_Timer_ISR(){
-    // Stop the timer and reset
-    timer_pause(TIMER_GROUP_0, TIMER_0);
-    timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
-
-    printf("Number of presses detected: %d", num_presses);
 }
 
 /****************************Interrupt Service Routines*****************************/

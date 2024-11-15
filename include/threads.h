@@ -21,6 +21,7 @@ extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
 extern QueueHandle_t data_queue; 
 extern SemaphoreHandle_t Button_sem;
+extern gptimer_handle_t Button_timer;
 
 // FIXME: Would rather include function's header file
 extern int esp_clk_cpu_freq();
@@ -35,6 +36,7 @@ extern int esp_clk_cpu_freq();
 void SEM_test(void *args);
 void SPI_test(void *args); 
 void Button_task(void *args);
+void Timer_test(void *args);
 
 /********************************Public Functions***********************************/
 

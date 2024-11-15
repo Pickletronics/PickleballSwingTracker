@@ -35,9 +35,10 @@ void app_main(void) {
     Button_sem = xSemaphoreCreateBinary();
 
     // Spawn threads
-    xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(SEM_test, "UART_TEST", 2048, NULL, 1, NULL);
+    // xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
+    // xTaskCreate(SEM_test, "UART_TEST", 2048, NULL, 1, NULL);
     xTaskCreate(Button_task, "button_task", 2048, NULL, 1, NULL);
+    xTaskCreate(Timer_test, "timer_task", 2048, NULL, 1, NULL);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);
