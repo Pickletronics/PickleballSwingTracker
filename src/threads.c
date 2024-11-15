@@ -85,7 +85,6 @@ void SPI_test(void *args) {
 }
 
 void Button_task(void *args) {
-
     TickType_t curr_time, press_time;
     const TickType_t debounce_time = pdMS_TO_TICKS(30);
     const TickType_t hold_threshold = pdMS_TO_TICKS(600);
@@ -94,16 +93,12 @@ void Button_task(void *args) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
             // Debounce button press
             vTaskDelay(debounce_time);
-
-            // Pause timer
-            gptimer_stop(button_timer);
-
-            // Set start time
+            timer_pause(TIMER_GROUP_0, TIMER_0);
             press_time = xTaskGetTickCount();
             curr_time = press_time;
 
             while (!Button_Read())
-            {
+            {                
                 if (curr_time - press_time > hold_threshold) {
                     hold_detected = true;
                     break;
@@ -111,17 +106,18 @@ void Button_task(void *args) {
                 curr_time = xTaskGetTickCount();
             }
             
-            // Increment global button press counter
+            // Increment press counter
             num_presses++;
+            hold_detected = false;
 
-            // Restart the timer
-            gptimer_set_raw_count(button_timer, 0);
-            gptimer_start(button_timer);
-
-            gpio_intr_enable(BUTTON_PIN);  // Re-enable button interrupt
+            // Reset timer
+            timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+            timer_start(TIMER_GROUP_0, TIMER_0);
+            gpio_intr_enable(BUTTON_PIN);
         }
     }
 }
+
 
 /********************************Public Functions***********************************/
 
@@ -139,8 +135,8 @@ void Button_ISR() {
 
 void Button_Timer_ISR(){
     // Stop the timer and reset
-    gptimer_stop(button_timer);  
-    gptimer_set_raw_count(button_timer, 0);
+    timer_pause(TIMER_GROUP_0, TIMER_0);
+    timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
 
     printf("Number of presses detected: %d", num_presses);
 }

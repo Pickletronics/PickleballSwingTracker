@@ -9,7 +9,7 @@
 
 /********************************Public Variables***********************************/
 
-gptimer_handle_t button_timer;
+timer_isr_handle_t button_timer;
 
 /********************************Public Variables***********************************/
 
@@ -55,22 +55,17 @@ int Button_Read() {
 
 void Button_Timer_Init(){
     // Configure the Timer/Counter for button press detection timing
-    gptimer_config_t tc_conf;
-    tc_conf.clk_src = GPTIMER_CLK_SRC_DEFAULT;
-    tc_conf.direction = GPTIMER_COUNT_UP;
-    tc_conf.resolution_hz = 1000000;
-    gptimer_new_timer(&tc_conf, &button_timer);
-
-    gptimer_alarm_config_t alarm_config;
-    alarm_config.alarm_count = pdMS_TO_TICKS(600);
-    alarm_config.reload_count = 0;
-    alarm_config.flags.auto_reload_on_alarm = false;
-    gptimer_set_alarm_action(button_timer, &alarm_config);
-
-    gptimer_event_callbacks_t cbs;
-    cbs.on_alarm = Button_Timer_ISR;
-    gptimer_register_event_callbacks(button_timer, &cbs, NULL);
-    gptimer_enable(button_timer);
+    timer_config_t config = {
+        .divider = 80,                   // 1 microsecond per tick (80 MHz APB clock)
+        .counter_dir = TIMER_COUNT_UP,
+        .counter_en = TIMER_START,
+        .alarm_en = TIMER_ALARM_EN,
+        .auto_reload = true,
+        .intr_type = TIMER_INTR_LEVEL,
+    };
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+    timer_enable_intr(TIMER_GROUP_0, TIMER_0);
+    timer_isr_register(TIMER_GROUP_0, TIMER_0, Button_Timer_ISR, NULL, ESP_INTR_FLAG_LEVEL1, &button_timer);
 }
 
 /********************************Public Functions***********************************/

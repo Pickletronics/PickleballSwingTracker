@@ -4,12 +4,12 @@
 #define BUTTON_H_
 
 #include "driver/gpio.h"
-#include "driver/gptimer.h"
+#include "driver/timer.h"
 #include <stdint.h>
 
 #define BUTTON_PIN      GPIO_NUM_34
 
-extern gptimer_handle_t button_timer;
+extern timer_isr_handle_t button_timer;
 
 void Button_Init();
 int Button_Read();
