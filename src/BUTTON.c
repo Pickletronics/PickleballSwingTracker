@@ -82,8 +82,8 @@ void Button_Timer_Init(){
 
 bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_data){
     
+    gptimer_stop(Button_timer);
     timer_trig = true;
-    // gptimer_disable(Button_timer);
     
     return true;
 }

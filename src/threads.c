@@ -87,7 +87,7 @@ void SPI_test(void *args) {
 
 void Button_task(void *args) {
     TickType_t curr_time, press_time;
-    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    const TickType_t debounce_time = pdMS_TO_TICKS(100);
     const TickType_t hold_threshold = pdMS_TO_TICKS(600);
 
     while (1) {
@@ -104,6 +104,7 @@ void Button_task(void *args) {
 
             printf("hold check\n");
 
+            // check for hold
             while (!Button_Read())
             {                
                 if (curr_time - press_time > hold_threshold) {
