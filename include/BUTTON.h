@@ -5,6 +5,7 @@
 
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
+#include "threads.h"
 #include <stdint.h>
 
 #define BUTTON_PIN          GPIO_NUM_34

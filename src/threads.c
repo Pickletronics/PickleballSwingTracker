@@ -10,8 +10,7 @@
 
 bool SPI_prints = true;
 volatile bool hold_detected = false;
-volatile uint8_t num_presses = 0;
-extern bool timer_trig;
+volatile int8_t num_presses = 0;
 
 /********************************Public Variables***********************************/
 
@@ -87,66 +86,49 @@ void SPI_test(void *args) {
 
 void Button_task(void *args) {
     TickType_t curr_time, press_time;
-    const TickType_t debounce_time = pdMS_TO_TICKS(100);
-    const TickType_t hold_threshold = pdMS_TO_TICKS(600);
+    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    const TickType_t hold_threshold = pdMS_TO_TICKS(400);
 
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
-            printf("entered task\n");
-            // gptimer_disable(Button_timer);
             
             // Debounce button press
-            printf("debouncing\n");
             vTaskDelay(debounce_time);
             press_time = xTaskGetTickCount();
             curr_time = press_time;
+            // Pause timer if timer running
+            if (num_presses != 0) { gptimer_stop(Button_timer); }
 
-
-            printf("hold check\n");
-
-            // check for hold
+            // Poll for hold
             while (!Button_Read())
-            {                
+            {
+                // Update current timer
+                curr_time = xTaskGetTickCount();
+                // Check if press is longer than the hold threshold
                 if (curr_time - press_time > hold_threshold) {
                     hold_detected = true;
                     break;
                 }
-                curr_time = xTaskGetTickCount();
             }
-            
-            printf("incrementing counter\n");
-            // Increment press counter
-            num_presses++;
 
-            // Restart the timer
-            if (num_presses == 0)
-            {
-                gptimer_enable(Button_timer);
-            }
-            
+            // Increment press counter if pressed
+            num_presses++;
+            // Restart the timer if running
+            if (num_presses == 0){ gptimer_enable(Button_timer); }
             gptimer_set_raw_count(Button_timer, 0);
             gptimer_start(Button_timer);
-            printf("timer reset!\n");
-
-            // Enable button interrupts
             gpio_intr_enable(BUTTON_PIN);
         }
     }
 }
 
-void Timer_test(void *args){
+void Timer_task(void *args){
+    int8_t Button_input;
     while (true)
     {
-        if (timer_trig) {
-            if (!hold_detected)
-            {
-                printf("Number of presses detected: %d\n", num_presses);
-            } else {
-                printf("Hold detected\n");
-            }
-            timer_trig = false;
-            hold_detected = false;
-            num_presses = 0;
+        // Recieve button input from queue
+        if (xQueueReceive(Button_queue, &Button_input, pdMS_TO_TICKS(10))) {
+            printf("Number of presses detected: %d\n", Button_input);
         }
         vTaskDelay(5);
     }       
