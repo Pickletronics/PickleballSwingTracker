@@ -81,6 +81,10 @@ void Button_Timer_Init(){
     gptimer_set_alarm_action(Button_timer, &alarm_config);
 }
 
+/********************************Public Functions***********************************/
+
+/***************************Interrupt Service Routines******************************/
+
 bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_data){
     
     // Stop timer
@@ -100,4 +104,4 @@ bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm
     // return true;
 }
 
-/********************************Public Functions***********************************/
+/***************************Interrupt Service Routines******************************/
