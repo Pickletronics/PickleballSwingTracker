@@ -1,4 +1,4 @@
-// button_SPI.c
+// button.c
 
 /************************************Includes***************************************/
 
@@ -9,6 +9,10 @@
 
 /********************************Public Variables***********************************/
 
+gptimer_handle_t Button_timer;
+volatile bool timer_trig = false;
+extern uint8_t num_presses;
+extern bool hold_detected;
 
 /********************************Public Variables***********************************/
 
@@ -43,10 +47,61 @@ void Button_Init() {
         // Handle error if ISR handler fails to add
         printf("Failed to add ISR handler: %s\n", esp_err_to_name(ret));
     }
+
+    // Initialize the Timer/Counter for the Button
+    Button_Timer_Init();
 }
 
 int Button_Read() {
     return gpio_get_level(BUTTON_PIN);
 }
 
+void Button_Timer_Init(){
+    // Initialize button queue
+    Button_queue = xQueueCreate(4, sizeof(int8_t));
+
+    // Configure the Timer/Counter for button press detection timing
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_RES, 
+    };
+    gptimer_new_timer(&timer_config, &Button_timer);
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = Button_Timer_Callback,
+    };
+    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
+
+    gptimer_enable(Button_timer);
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = ALARM_COUNT,
+    };
+    gptimer_set_alarm_action(Button_timer, &alarm_config);
+}
+
 /********************************Public Functions***********************************/
+
+/***************************Interrupt Service Routines******************************/
+
+bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_data){
+    
+    // Stop timer
+    gptimer_stop(Button_timer);
+
+    // Write button press type to queue
+    BaseType_t high_task_awoken = pdFALSE;
+    QueueHandle_t queue = (QueueHandle_t) user_data;
+    if (hold_detected) { num_presses = -1; }
+    xQueueSendFromISR(queue, &num_presses, &high_task_awoken);
+
+    // Reset relevant variables
+    num_presses = 0;
+    hold_detected = false;
+
+    return (high_task_awoken == pdTRUE);
+    // return true;
+}
+
+/***************************Interrupt Service Routines******************************/

@@ -15,6 +15,7 @@
 SemaphoreHandle_t SPI_sem;
 QueueHandle_t data_queue; 
 SemaphoreHandle_t Button_sem;
+QueueHandle_t Button_queue;
 
 /********************************Public Variables***********************************/
 
@@ -31,13 +32,14 @@ void app_main(void) {
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
-    data_queue = xQueueCreate(9, sizeof(int16_t));
     Button_sem = xSemaphoreCreateBinary();
+    data_queue = xQueueCreate(9, sizeof(int16_t));
 
     // Spawn threads
-    xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(SEM_test, "UART_TEST", 2048, NULL, 1, NULL);
+    // xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
+    // xTaskCreate(SEM_test, "UART_TEST", 2048, NULL, 1, NULL);
     xTaskCreate(Button_task, "button_task", 2048, NULL, 1, NULL);
+    xTaskCreate(Timer_task, "timer_task", 2048, NULL, 1, NULL);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);
