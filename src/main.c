@@ -12,9 +12,13 @@
 /********************************Public Variables***********************************/
 
 SemaphoreHandle_t SPI_sem;
-QueueHandle_t data_queue; 
 SemaphoreHandle_t Button_sem;
-// SemaphoreHandle_t dataDump_sem;
+
+#define QUEUE_LENGTH    2048
+#define ITEM_SIZE       sizeof( IMU_sample_t )
+static StaticQueue_t xStaticQueue;
+QueueHandle_t Sample_queue; 
+uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
 
 /********************************Public Variables***********************************/
 
@@ -28,23 +32,23 @@ void app_main(void) {
     Button_Init();
     MPU9250_Init();
     BLE_Start(); 
-    SPIFFS_init(); 
+    // SPIFFS_init(); 
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
     Button_sem = xSemaphoreCreateBinary();
-    // dataDump_sem = xSemaphoreCreateBinary();
     
     // Initialize queues
-    data_queue = xQueueCreate(100, sizeof(int16_t));
+    Sample_queue = xQueueCreateStatic( QUEUE_LENGTH, ITEM_SIZE, ucQueueStorageArea, &xStaticQueue );
 
     // Spawn threads
-    xTaskCreate(SPI_test, "SPI_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(SEM_test, "UART_TEST", 2048, NULL, 1, NULL);
-    xTaskCreate(Button_task, "Button_task", 2048, NULL, 1, NULL);
-    xTaskCreate(DumpData_task, "DataDump_task", 4096, NULL, 1, NULL);
+    xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 2048, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4098, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
+    // xTaskCreate(SEM_test, "SEM_TEST", 2048, NULL, 1, NULL);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);
+    // xTaskCreate(MPU9250_plot_accel_mag, "Serial_Plot", 2048, NULL, 1, NULL);
     // xTaskCreate(MPU9250_plot_gyro, "Serial_Plot", 2048, NULL, 1, NULL);
 }

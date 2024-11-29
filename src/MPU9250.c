@@ -113,7 +113,21 @@ void MPU9250_plot_accel() {
         };
 
         UART_write(accel, 6);
-        vTaskDelay(1);
+    }
+}
+
+void MPU9250_plot_accel_mag() {
+    while(1) {
+        MPU9250_update();
+
+        // output data over uart
+        uint16_t mag_accel = sqrtf(mpu.accel.x * mpu.accel.x + mpu.accel.y * mpu.accel.y + mpu.accel.z * mpu.accel.z);
+        char accel[2] = {
+            (mag_accel >> 8) & 0xFF,
+            (mag_accel) & 0xFF,
+        };
+
+        UART_write(accel, 2);
     }
 }
 
@@ -132,7 +146,6 @@ void MPU9250_plot_gyro() {
         };
 
         UART_write(gyro, 6);
-        vTaskDelay(1);
     }
 }
 
