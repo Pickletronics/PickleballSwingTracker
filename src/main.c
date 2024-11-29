@@ -13,6 +13,7 @@
 
 SemaphoreHandle_t SPI_sem;
 SemaphoreHandle_t Button_sem;
+QueueHandle_t Button_queue;
 
 #define QUEUE_LENGTH    2048
 #define ITEM_SIZE       sizeof( IMU_sample_t )
@@ -32,12 +33,12 @@ void app_main(void) {
     Button_Init();
     MPU9250_Init();
     BLE_Start(); 
-    // SPIFFS_init(); 
+    SPIFFS_init(); 
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
     Button_sem = xSemaphoreCreateBinary();
-    
+
     // Initialize queues
     Sample_queue = xQueueCreateStatic( QUEUE_LENGTH, ITEM_SIZE, ucQueueStorageArea, &xStaticQueue );
 
@@ -45,6 +46,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 2048, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4098, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Timer_task, "timer_task", 2048, NULL, 1, NULL, 1);
     // xTaskCreate(SEM_test, "SEM_TEST", 2048, NULL, 1, NULL);
 
     // Plot threads

@@ -22,7 +22,8 @@
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
 extern SemaphoreHandle_t Button_sem;
-// extern SemaphoreHandle_t dataDump_sem;
+extern gptimer_handle_t Button_timer;
+extern QueueHandle_t Button_queue;
 extern QueueHandle_t Sample_queue; 
 
 // FIXME: Would rather include function's header file
@@ -49,6 +50,7 @@ void SEM_test(void *args);
 void Sample_Sensor_task(void *args); 
 void Button_task(void *args);
 void Process_Data_task(void *args); 
+void Timer_task(void *args);
 
 /********************************Public Functions***********************************/
 

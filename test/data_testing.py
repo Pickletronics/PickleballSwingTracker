@@ -132,6 +132,11 @@ class KalmanFilter:
 
 
 def main():
+
+    """
+        ISOLATE DATA FROM PUTTY LOG
+    """
+
     # Input and output file paths
     input_file = "putty.log"  # Replace with your log file name
     output_file = "data_dump.csv"
@@ -157,6 +162,11 @@ def main():
             accel_data.append(row[1:4])                # Accelerometer data x, y, z
             gyro_data.append(row[4:7])                 # Gyroscope data x, y, z
             mag_data.append(row[7:10])                 # Magnetometer data x, y, z
+
+
+    """
+        SAMPLES PER SECOND
+    """
 
     samples_per_sec = calculate_samples_per_second(ticks)
     print(f"Samples per second: {samples_per_sec:.2f}")
@@ -204,14 +214,31 @@ def main():
         DETECT IMPACTS
     """
  
-    IMPACT_THRESHOLD = 3.0
+    IMPACT_THRESHOLD = 1.0  # Threshold for significant impact in m/s²/ms
     impacts = []
+
+    # Lists to store the rate of change of acceleration
+    rate_of_change_list = []
+
+    # Calculate the rate of change
+    peak_found = False
     for i in range(1, len(accel_mag)):
-        # Check for a significant change from the previous value
-        delta = accel_mag[i] - accel_mag[i - 1]
-        if delta > IMPACT_THRESHOLD:
-            print(f"Impact at {time_ms[i]} ms")
-            impacts.append((time_ms[i], accel_mag[i]))
+        delta = accel_mag[i] - accel_mag[i - 1]  # Change in acceleration magnitude
+        delta_time = time_ms[i] - time_ms[i - 1]  # Time difference in ms
+        rate_of_change = delta / delta_time  # Rate of change in m/s^2/ms
+        rate_of_change_list.append(rate_of_change)
+
+        # Check if the rate of change exceeds the threshold
+        if rate_of_change > IMPACT_THRESHOLD:
+            peak_found = True
+        # check window - find peak of impact
+
+        if peak_found:
+            if accel_mag[i] > accel_mag[i - 1] and accel_mag[i] > accel_mag[i + 1]:
+                impacts.append((time_ms[i], accel_mag[i]))  # Add the time and magnitude of the peak
+                peak_found = False
+
+    plot_data(time_ms[1:], rate_of_change_list, "Impacts", 0, "m/s²/ms")
 
     # plot magnitude of acceleration and impacts detected
     plot_data(time_ms, accel_mag, "Accel Mag over Time", (0,8), "g", impacts=impacts)
