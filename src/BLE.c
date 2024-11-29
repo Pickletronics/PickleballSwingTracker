@@ -9,7 +9,7 @@
 
 /********************************Public Variables***********************************/
 
-char *TAG = "BLE-Server";
+char *BLE_TAG = "BLE-Server";
 uint8_t ble_addr_type;
 
 static const struct ble_gatt_svc_def gatt_svcs[] = {
@@ -27,13 +27,20 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 /********************************Public Functions***********************************/
 
 void BLE_Start(){
+    // // Initialize NVS 
+    // esp_err_t ret = nvs_flash_init();
+    // if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    //     ESP_ERROR_CHECK(nvs_flash_erase());
+    //     ret = nvs_flash_init();
+    // }
+    // ESP_ERROR_CHECK(ret);
 
     // Initialize necessary modules 
     nvs_flash_init();                          // 1 - Initialize NVS flash using
     nimble_port_init();                        // 3 - Initialize the host stack
     
     // Set up GAP and GATT services 
-    ble_svc_gap_device_name_set(TAG);          // 4 - Initialize NimBLE configuration - server name
+    ble_svc_gap_device_name_set(BLE_TAG);          // 4 - Initialize NimBLE configuration - server name
     ble_svc_gap_init();                        // 4 - Initialize NimBLE configuration - gap service
     ble_svc_gatt_init();                       // 4 - Initialize NimBLE configuration - gatt service
     ble_gatts_count_cfg(gatt_svcs);            // 4 - Initialize NimBLE configuration - config gatt services
@@ -50,19 +57,22 @@ void BLE_Start(){
 // one characteristic, and aren't passing in extra args right now. 
 // Need these parameters to be compliant with the NimBLE API. 
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg){
-    // Create buffer for data 
-    int16_t data[3];
-    int i = 0;
+    // // Create buffer for data 
+    // int16_t data[3];
+    // int i = 0;
 
-    // Read items in the queue 
-    while( i < 3 && xQueueReceive(data_queue, &data[i], 0) == pdTRUE){
-        printf("Accel val from queue = %d\n", data[i]);
+    // // Read items in the queue 
+    // while( i < 3 && xQueueReceive(data_queue, &data[i], 0) == pdTRUE){
+    //     printf("Accel val from queue = %d\n", data[i]);
 
-        // Append the data to the ble buffer
-        os_mbuf_append(ctxt->om, &data[i], sizeof(data[i]));
-        i++;
-    }
-    
+    //     // Append the data to the ble buffer
+    //     os_mbuf_append(ctxt->om, &data[i], sizeof(data[i]));
+    //     i++;
+    // }
+
+    // Send Hello World
+    os_mbuf_append(ctxt->om, "Hello World!", sizeof("Hello World!"));
+
     return 0; 
 }
 

@@ -8,7 +8,7 @@
 
 /********************************Public Variables***********************************/
 
-bool SPI_prints = true;
+bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
 
@@ -30,8 +30,7 @@ void SEM_test(void *args) {
             xSemaphoreGive(SPI_sem);
             end = xTaskGetTickCount();
 
-            if (SPI_prints)
-                printf("\nSemaphore held for %.2f seconds\n", ((float)(end-start))/configTICK_RATE_HZ);
+            printf("\nSemaphore held for %.2f seconds\n", ((float)(end-start))/configTICK_RATE_HZ);
         }
         else {}
 
@@ -39,49 +38,85 @@ void SEM_test(void *args) {
     }
 }
 
-void SPI_test(void *args) {
-    uint8_t who_am_i;
+// Sampling task
+// Reads accelerometer and gyroscope data from IMU 
+// and pushes to buffer for processing
+void Sample_Sensor_task(void *args) {
+    IMU_sample_t sample;
 
     while(1){
-        // try to acquire semaphore for 10 ticks
-        if (xSemaphoreTake(SPI_sem, 10) == pdTRUE) {
+        // read IMU over SPI
+        MPU9250_update();
 
-            // read MPU9250 over SPI
-            who_am_i = MPU9250_read_WHOAMI();
-            MPU9250_update();
+        // populate sample type
+        sample.time = xTaskGetTickCount();
+        sample.IMU = mpu;
 
-            // release semaphore
-            xSemaphoreGive(SPI_sem);
-
-            // Send data to the BLE data queue 
-            if (xQueueSend(data_queue, &mpu.accel.x, 10) != pdPASS) {
-                printf("Failed to send accel.x to queue\n");
-            }
-            if (xQueueSend(data_queue, &mpu.accel.y, 10) != pdPASS) {
-                printf("Failed to send accel.y to queue\n");
-            }
-            if (xQueueSend(data_queue, &mpu.accel.z, 10) != pdPASS) {
-                printf("Failed to send accel.z to queue\n");
-            }
-
-            // print data
-            if (SPI_prints) {
-                printf("\n");
-                printf("Who Am I: 0x%02X\n", who_am_i);
-                printf("\n");
-                printf("Accel.x = %d\n", mpu.accel.x);
-                printf("Accel.y = %d\n", mpu.accel.y);
-                printf("Accel.z = %d\n", mpu.accel.z);
-                printf("\n");
-                printf("Gyro.x = %d\n", mpu.gyro.x);
-                printf("Gyro.y = %d\n", mpu.gyro.y);
-                printf("Gyro.z = %d\n", mpu.gyro.z);
-            }
+        // Add sample to queue circularly
+        if (uxQueueSpacesAvailable(Sample_queue) == 0) {
+            // Queue is full, remove the oldest item
+            IMU_sample_t dummy;
+            xQueueReceive(Sample_queue, &dummy, 0);
         }
-        else {}
-
-        vTaskDelay(1); 
+        xQueueSend( Sample_queue, &sample, 0 );
     }   
+}
+
+void Process_Data_task(void *args) {
+    const float SENSITIVITY = (4.0f * 9.81f / 32768.0f);
+    const float IMPACT_CHANGE_THRESHOLD = 20.0f;
+    float prev_accel_magnitude = 0.0f;
+    IMU_sample_t sample;
+
+    // FIXME: for demo, led init/vars
+    const gpio_num_t LED_PIN = 2;
+    const TickType_t LED_on_time = pdMS_TO_TICKS(500);
+    TickType_t last_impact_time = 0;
+    gpio_reset_pin(LED_PIN);
+    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+
+    while(1) {
+        // read values from queue
+        xQueueReceive( Sample_queue, &sample, 5);
+
+        // Convert raw accelerometer values to m/s^2
+        Vector3D accel_real = {
+            sample.IMU.accel.x * SENSITIVITY,
+            sample.IMU.accel.y * SENSITIVITY,
+            sample.IMU.accel.z * SENSITIVITY
+        };
+
+        float accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+        float magnitude_change = fabs(accel_magnitude - prev_accel_magnitude);
+
+        // Check for impact based on change in magnitude
+        if (magnitude_change > IMPACT_CHANGE_THRESHOLD) {
+            // Impact detected
+            last_impact_time = sample.time;
+        }
+
+        // FIXME: for demo, turn on led for 1 sec
+        if (xTaskGetTickCount() - last_impact_time < LED_on_time) {
+            gpio_set_level(LED_PIN, 1);
+        }
+        else {
+            gpio_set_level(LED_PIN, 0);
+        }
+
+        // Update the previous magnitude for the next iteration
+        prev_accel_magnitude = accel_magnitude;
+
+        // Dump data for python processing
+        if (Dump_data) {
+            // Currently a bottleneck - UART is slow
+            printf("%02lX,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+            sample.time,
+            sample.IMU.accel.x, sample.IMU.accel.y, sample.IMU.accel.z,
+            sample.IMU.gyro.x, sample.IMU.gyro.y, sample.IMU.gyro.z,
+            sample.IMU.mag.x, sample.IMU.mag.y, sample.IMU.mag.z);
+        }
+
+    }
 }
 
 void Button_task(void *args) {
@@ -128,7 +163,13 @@ void Timer_task(void *args){
     {
         // Recieve button input from queue
         if (xQueueReceive(Button_queue, &Button_input, pdMS_TO_TICKS(10))) {
-            printf("Number of presses detected: %d\n", Button_input);
+            if (Button_input == -1) {
+                Dump_data = !Dump_data;
+                printf("Hold detected!\n");
+            }
+            else {
+                printf("Number of presses detected: %d\n", Button_input);
+            }
         }
         vTaskDelay(5);
     }       

@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "SPI.h"
 #include "UART.h"
+#include <math.h>
 
 /************************************Includes***************************************/
 
@@ -77,6 +78,7 @@ void MPU9250_update();
 // PLOT FUNC SERIAL MONITOR SETTINGS:
     // - 3 channels, Simple Binary, int16, Little Endian
 void MPU9250_plot_accel();
+void MPU9250_plot_accel_mag();
 void MPU9250_plot_gyro();
 
 /********************************Public Functions***********************************/
