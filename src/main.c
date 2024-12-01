@@ -46,7 +46,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 2048, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4098, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(Timer_task, "timer_task", 2048, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Timer_task, "Timer_task", 2048, NULL, 1, NULL, 1);
     // xTaskCreate(SEM_test, "SEM_TEST", 2048, NULL, 1, NULL);
 
     // Plot threads

@@ -92,7 +92,7 @@ void Process_Data_task(void *args) {
         // Check for impact based on change in magnitude
         if (magnitude_change > IMPACT_CHANGE_THRESHOLD) {
             // Impact detected
-            last_impact_time = sample.time;
+            last_impact_time = xTaskGetTickCount();
         }
 
         // FIXME: for demo, turn on led for 1 sec

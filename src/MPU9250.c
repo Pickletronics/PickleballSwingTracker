@@ -82,16 +82,42 @@ uint8_t MPU9250_read_WHOAMI() {
     return MPU9250_read(MPU9250_WHOAMI);  
 }
 
+void MPU9250_read_accelerometer() {
+    uint8_t data[6];
+
+    SPI_Select(MPU9250_CS); // turn on CS
+    SPI_Write_Read(ACCEL_XH, data, 6); // start from XH, end on ZL
+    SPI_Deselect(MPU9250_CS); // turn off CS
+
+    mpu.accel.x = (int16_t)((data[0] << 8) | data[1]);
+    mpu.accel.y = (int16_t)((data[2] << 8) | data[3]);
+    mpu.accel.z = (int16_t)((data[4] << 8) | data[5]);
+}
+
+void MPU9250_read_gyroscope() {
+    uint8_t data[6];
+
+    SPI_Select(MPU9250_CS); // turn on CS
+    SPI_Write_Read(GYRO_XH, data, 6); // start from XH, end on ZL
+    SPI_Deselect(MPU9250_CS); // turn off CS
+
+    mpu.gyro.x = (int16_t)((data[0] << 8) | data[1]);
+    mpu.gyro.y = (int16_t)((data[2] << 8) | data[3]);
+    mpu.gyro.z = (int16_t)((data[4] << 8) | data[5]);
+}
+
 void MPU9250_update() {
     // read acccel x, y, z
-    mpu.accel.x = (MPU9250_read(ACCEL_XH) << 8) | MPU9250_read(ACCEL_XL);
-    mpu.accel.y = (MPU9250_read(ACCEL_YH) << 8) | MPU9250_read(ACCEL_YL);
-    mpu.accel.z = (MPU9250_read(ACCEL_ZH) << 8) | MPU9250_read(ACCEL_ZL);
+    // mpu.accel.x = (MPU9250_read(ACCEL_XH) << 8) | MPU9250_read(ACCEL_XL);
+    // mpu.accel.y = (MPU9250_read(ACCEL_YH) << 8) | MPU9250_read(ACCEL_YL);
+    // mpu.accel.z = (MPU9250_read(ACCEL_ZH) << 8) | MPU9250_read(ACCEL_ZL);
+    MPU9250_read_accelerometer();
 
     // read gyro x, y, z
-    mpu.gyro.x = (MPU9250_read(GYRO_XH) << 8) | MPU9250_read(GYRO_XL);
-    mpu.gyro.y = (MPU9250_read(GYRO_YH) << 8) | MPU9250_read(GYRO_YL);
-    mpu.gyro.z = (MPU9250_read(GYRO_ZH) << 8) | MPU9250_read(GYRO_ZL);
+    // mpu.gyro.x = (MPU9250_read(GYRO_XH) << 8) | MPU9250_read(GYRO_XL);
+    // mpu.gyro.y = (MPU9250_read(GYRO_YH) << 8) | MPU9250_read(GYRO_YL);
+    // mpu.gyro.z = (MPU9250_read(GYRO_ZH) << 8) | MPU9250_read(GYRO_ZL);
+    MPU9250_read_gyroscope();
 }
 
 /********************************Public Functions***********************************/

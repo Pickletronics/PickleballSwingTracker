@@ -30,6 +30,8 @@ esp_err_t SPI_Select(uint8_t CS_num);
 esp_err_t SPI_Deselect(uint8_t CS_num);
 esp_err_t SPI_Write(uint8_t *data, size_t length);
 esp_err_t SPI_Read(uint8_t *data, size_t length);
+esp_err_t SPI_Write_Read(uint8_t reg, uint8_t *data, size_t length);
+
 
 /********************************Public Functions***********************************/
 
