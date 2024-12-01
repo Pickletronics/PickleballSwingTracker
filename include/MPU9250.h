@@ -73,6 +73,8 @@ void MPU9250_Init(void);
 void MPU9250_write(uint8_t reg, uint8_t val);
 uint8_t MPU9250_read(uint8_t reg);
 uint8_t MPU9250_read_WHOAMI();
+void MPU9250_read_accelerometer();
+void MPU9250_read_gyroscope();
 void MPU9250_update();
 
 // PLOT FUNC SERIAL MONITOR SETTINGS:

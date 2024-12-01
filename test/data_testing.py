@@ -43,8 +43,11 @@ def on_key(event):
     # otherwise, close current plot
     plt.close()  # Close the plot
 
+fig_num = 1;
 def plot_data(ticks, accel_vals, plot_title, y_range, units, impacts=[]):
-    plt.figure()
+    global fig_num
+    plt.figure(fig_num)
+    fig_num += 1
     plt.plot(ticks, accel_vals, marker='o', linestyle='-')
     plt.xlabel('Time (ms)')
     plt.ylabel(units)
@@ -63,21 +66,50 @@ def plot_data(ticks, accel_vals, plot_title, y_range, units, impacts=[]):
 
 
 
+
 def calculate_samples_per_second(values):
-    # Calculate differences between consecutive samples
-    differences = [values[i + 1] - values[i] for i in range(len(values) - 1)]
+    if len(values) < 2:
+        return 0  # Not enough samples to calculate rate
     
-    # Total time in milliseconds
-    total_time_ms = sum(differences)
+    # Find the unique timestamps
+    unique_times = sorted(set(values))
+    
+    # Calculate total time in milliseconds
+    total_time_ms = unique_times[-1] - unique_times[0]
     
     # Convert total time to seconds
-    total_time_s = total_time_ms / 1000
+    total_time_s = total_time_ms / 1000 if total_time_ms > 0 else 1  # Avoid divide by zero
     
     # Samples per second
     samples_per_second = len(values) / total_time_s if total_time_s > 0 else 0
     
     return samples_per_second
 
+def estimate_time_vector(ticks):
+    # Initialize the time vector
+    time_ms = []
+    
+    # Process ticks to handle same-millisecond samples
+    i = 0
+    while i < len(ticks):
+        # Find the range of samples that share the same timestamp
+        same_tick_indices = [i]
+        while i + 1 < len(ticks) and ticks[i] == ticks[i + 1]:
+            same_tick_indices.append(i + 1)
+            i += 1
+        
+        # Number of samples sharing the same millisecond
+        num_samples = len(same_tick_indices)
+        
+        # Distribute the samples evenly within the millisecond
+        base_time = ticks[same_tick_indices[0]] - ticks[0]
+        for j in range(num_samples):
+            time_offset = j / num_samples  # Offset within the millisecond
+            time_ms.append(base_time + time_offset)
+        
+        i += 1
+    
+    return time_ms
 
 
 
@@ -164,6 +196,9 @@ def main():
             mag_data.append(row[7:10])                 # Magnetometer data x, y, z
 
 
+
+
+
     """
         SAMPLES PER SECOND
     """
@@ -171,7 +206,7 @@ def main():
     samples_per_sec = calculate_samples_per_second(ticks)
     print(f"Samples per second: {samples_per_sec:.2f}")
 
-    time_ms = [tick - ticks[0] for tick in ticks]
+    time_ms = estimate_time_vector(ticks)
 
 
 
@@ -252,12 +287,12 @@ def main():
     """
 
     # apply moving average filer to accelerometer data - nullifies impact
-    window_size = 10
+    window_size = 20
     accel_x_mavg = moving_average_filter(accel_x, window_size)
     accel_y_mavg = moving_average_filter(accel_y, window_size)
     accel_z_mavg = moving_average_filter(accel_z, window_size)
 
-    # Convert accel to meters per second
+    # Convert accel to meters per second per second
     accel_x_mps = np.array(accel_x_mavg) * 9.81
     accel_y_mps = np.array(accel_y_mavg) * 9.81
     accel_z_mps = np.array(accel_z_mavg) * 9.81
