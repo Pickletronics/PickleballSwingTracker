@@ -32,6 +32,10 @@
 - Occasional bounce of push button upon release (can be fixed with debounce circuitry)
 - High speed UART communication to dump data sometimes sends misaligned data (close other appliations or restart computer to solve)
 
+**Current Breadboard Setup:**
+
+![IMG_1425](https://github.com/user-attachments/assets/c9d3cb88-8666-49c8-98ce-e84242278bd4)
+
 **Completed Work:**
 - Project Setup: setup project using platform.io and confirmed the ability to build and upload code to the ESP32 microcontroller.
 - UART Communication: created a UART driver for the ESP32 and established communication between the ESP32 and our computers.
