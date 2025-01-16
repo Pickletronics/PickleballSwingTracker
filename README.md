@@ -1,4 +1,21 @@
 # PickleballSwingTracker
+How To Use:
+1) Install PlatformIO extension for Visual Studio Code
+2) Import project
+3) Upload code
+
+Data Testing Instructions:
+1) Download PuTTY
+2) Configure settings for UART communication: 460800 baud, 8 data bits, 1 stop, no parity, no flow control
+3) Configure putty logging: all session output, output putty.log to repo's test directory, always overwite it
+4) Hold push button to start/stop data dump
+5) Navigate to test folder and run data_testing.py
+
+Known Bugs:
+- Occasional bounce of push button upon release (can be fixed with debounce circuitry)
+- High speed UART communication to dump data sometimes sends misaligned data (close other appliations or restart computer to solve)
+
+
 Completed Work:
 - Project Setup: setup project using platform.io and confirmed the ability to build and upload code to the ESP32 microcontroller.
 - UART Communication: created a UART driver for the ESP32 and established communication between the ESP32 and our computers.
@@ -12,6 +29,3 @@ The project architecture is straightforward at this point. We have header and so
 - lib: will house any libraries that we include in our project.
 - src: houses the source code for SPI, UART, threads, the LSM6DSL, our main.c, and will house any future source code. 
 - test: will include any testing files we create. 
-
-Known Bugs:
-- There are currently no known bugs. We do get a watchdog warning that we are looking into, but SPI, UART, and threading are operating as expected to our knowledge. 

@@ -43,10 +43,22 @@ void SEM_test(void *args) {
 // and pushes to buffer for processing
 void Sample_Sensor_task(void *args) {
     IMU_sample_t sample;
+    uint32_t num_samples = 0;
+    TickType_t init_time_sec = xTaskGetTickCount();
+    TickType_t curr_time_sec = xTaskGetTickCount();
+    TickType_t one_sec = pdMS_TO_TICKS(1000);
 
     while(1){
         // read IMU over SPI
         MPU9250_update();
+        num_samples++;
+        curr_time_sec = xTaskGetTickCount();
+
+        if (curr_time_sec > init_time_sec + one_sec) {
+            printf("%ld samples per second\n", num_samples);
+            num_samples = 0;
+            init_time_sec = xTaskGetTickCount();
+        }
 
         // populate sample type
         sample.time = xTaskGetTickCount();
