@@ -11,6 +11,7 @@
 #include "button.h"
 #include "BLE.h"
 #include "SPIFFS.h"
+#include "circular_buffer.h"
 
 /************************************Includes***************************************/
 
@@ -32,11 +33,6 @@ extern int esp_clk_cpu_freq();
 /***********************************Externs*****************************************/
 
 /****************************Data Structure Definitions*****************************/
-
-typedef struct IMU_sample_t {
-    TickType_t time;
-    MPU9250_handle_t IMU;
-} IMU_sample_t;
 
 typedef struct Vector3D {
     float x, y, z;
