@@ -252,6 +252,8 @@ void SPIFFS_Test_task(void *args){
 
         // Spawn new thread 
         xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
+        xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
+
 
         vTaskDelay(1000);
     }
@@ -266,12 +268,22 @@ void SPIFFS_Write_task(void *args){
 
     while(1){
         // printf("%d,%d,%f\n", data->blah, data->blah2, data->blah3);
-        char buffer[64];
-        sprintf(buffer, "%d,%d,%d\n", data->blah, data->blah2, data->blah3);
+        if (xSemaphoreTake(SPIFFS_sem, 0) == pdTRUE) {
+            // Create string of passed in data
+            char buffer[64];
+            sprintf(buffer, "%d,%d,%d\n", data->blah, data->blah2, data->blah3);
 
-        SPIFFS_Write(file_path, buffer);
-        SPIFFS_Read(file_path); // For testing
-        vTaskDelete(NULL);
+            // Write the data 
+            SPIFFS_Write(file_path, buffer);
+            SPIFFS_Read(file_path); // For testing
+
+            // Give up the semaphore 
+            xSemaphoreGive(SPIFFS_sem);
+
+            // Killself 
+            vTaskDelete(NULL);
+        }
+        else {}
     }
 }
 

@@ -12,6 +12,7 @@
 /********************************Public Variables***********************************/
 
 SemaphoreHandle_t SPI_sem;
+SemaphoreHandle_t SPIFFS_sem;
 SemaphoreHandle_t Button_sem;
 QueueHandle_t Button_queue;
 
@@ -32,6 +33,7 @@ void app_main(void) {
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
     Button_sem = xSemaphoreCreateBinary();
+    SPIFFS_sem = xSemaphoreCreateMutex();
 
     // Spawn threads
     xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 4096, NULL, 1, NULL, 0);
