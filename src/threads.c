@@ -12,6 +12,9 @@ bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
 
+// for testing purposes
+bool impact_detected = false;
+
 /********************************Public Variables***********************************/
 
 /********************************Public Functions***********************************/
@@ -43,25 +46,72 @@ void SEM_test(void *args) {
 // and pushes to buffer for processing
 void Sample_Sensor_task(void *args) {
     IMU_sample_t sample;
+    uint32_t sample_count = 0;
+    const uint32_t NUM_SAMPLES_WAIT = 100;
+    const uint32_t NUM_SAMPLES_TOTAL = 200;
+
+    uint32_t num_samples = 0;
+    TickType_t init_time_sec = xTaskGetTickCount();
+    TickType_t curr_time_sec = xTaskGetTickCount();
+    TickType_t one_sec = pdMS_TO_TICKS(1000);
+
+    // for demo, led init/vars
+    const gpio_num_t LED_PIN = 2;
+    gpio_reset_pin(LED_PIN);
+    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+
+    Circular_Buffer_Init(IMU_BUFFER);
 
     while(1){
         // read IMU over SPI
         MPU9250_update();
 
+        // Sample per second check
+        // num_samples++;
+        // curr_time_sec = xTaskGetTickCount();
+        // if (curr_time_sec > init_time_sec + one_sec) {
+        //     printf("%ld samples per second\n", num_samples);
+        //     num_samples = 0;
+        //     init_time_sec = xTaskGetTickCount();
+        // }
+
         // populate sample type
         sample.time = xTaskGetTickCount();
         sample.IMU = mpu;
 
-        // Add sample to queue circularly
-        if (uxQueueSpacesAvailable(Sample_queue) == 0) {
-            // Queue is full, remove the oldest item
-            IMU_sample_t dummy;
-            xQueueReceive(Sample_queue, &dummy, 0);
+        // write data
+        Circular_Buffer_Write(IMU_BUFFER, sample);
+
+        // check for impact (double tap button to test)
+
+        if (impact_detected) {
+            // start counting samples to the right
+            sample_count++;
+            gpio_set_level(LED_PIN, 1);
+
+            // once desired number of samples, dump buffer and spawn processing thread
+            if (sample_count >= NUM_SAMPLES_WAIT) {
+                // populate data processing buffer
+                IMU_sample_t* processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
+
+                // print check for buffer
+                for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
+                    printf("%d\n", processing_buffer[i].IMU.accel.x);
+                }
+
+                // spawn data processing thread
+                free(processing_buffer); // thread will be responsible for this
+
+                // reset necessary variables
+                sample_count = 0;
+                impact_detected = false;
+                gpio_set_level(LED_PIN, 0);
+            }
         }
-        xQueueSend( Sample_queue, &sample, 0 );
     }   
 }
 
+/*
 void Process_Data_task(void *args) {
     const float SENSITIVITY = (4.0f * 9.81f / 32768.0f);
     const float IMPACT_CHANGE_THRESHOLD = 20.0f;
@@ -118,6 +168,7 @@ void Process_Data_task(void *args) {
 
     }
 }
+*/
 
 void Button_task(void *args) {
     TickType_t curr_time, press_time;
@@ -159,6 +210,7 @@ void Button_task(void *args) {
 
 void Timer_task(void *args){
     int8_t Button_input;
+
     while (true)
     {
         // Recieve button input from queue
@@ -169,8 +221,14 @@ void Timer_task(void *args){
             }
             else {
                 printf("Number of presses detected: %d\n", Button_input);
+
+                // for testing buffers
+                if (Button_input == 2) {
+                    impact_detected = true;
+                }
             }
         }
+        
         vTaskDelay(5);
     }       
 }

@@ -13,6 +13,7 @@
         "string_view": "c",
         "task.h": "c",
         "freertosconfig.h": "c",
-        "button.h": "c"
+        "button.h": "c",
+        "algorithm": "c"
     }
 }

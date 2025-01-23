@@ -15,12 +15,6 @@ SemaphoreHandle_t SPI_sem;
 SemaphoreHandle_t Button_sem;
 QueueHandle_t Button_queue;
 
-#define QUEUE_LENGTH    2048
-#define ITEM_SIZE       sizeof( IMU_sample_t )
-static StaticQueue_t xStaticQueue;
-QueueHandle_t Sample_queue; 
-uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
-
 /********************************Public Variables***********************************/
 
 /* Main */
@@ -39,12 +33,9 @@ void app_main(void) {
     SPI_sem = xSemaphoreCreateMutex();
     Button_sem = xSemaphoreCreateBinary();
 
-    // Initialize queues
-    Sample_queue = xQueueCreateStatic( QUEUE_LENGTH, ITEM_SIZE, ucQueueStorageArea, &xStaticQueue );
-
     // Spawn threads
-    xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 2048, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4098, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 4096, NULL, 1, NULL, 0);
+    // xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4096, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Timer_task, "Timer_task", 2048, NULL, 1, NULL, 1);
     // xTaskCreate(SEM_test, "SEM_TEST", 2048, NULL, 1, NULL);
