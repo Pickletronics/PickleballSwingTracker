@@ -38,6 +38,12 @@ typedef struct Vector3D {
     float x, y, z;
 } Vector3D;
 
+typedef struct SPIFFS_test_t {
+    uint16_t blah;
+    uint16_t blah2;
+    uint16_t blah3;
+} SPIFFS_test_t;
+
 /****************************Data Structure Definitions*****************************/
 
 /********************************Public Functions***********************************/
@@ -47,6 +53,8 @@ void Sample_Sensor_task(void *args);
 void Button_task(void *args);
 void Process_Data_task(void *args); 
 void Timer_task(void *args);
+void SPIFFS_Test_task(void *args);
+void SPIFFS_Write_task(void *args);
 
 /********************************Public Functions***********************************/
 

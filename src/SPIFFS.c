@@ -51,6 +51,17 @@ void SPIFFS_init() {
     } else {
         ESP_LOGE(SPIFFS_TAG, "Failed to get SPIFFS info (%s)", esp_err_to_name(ret));
     }
+
+    // If SPIFFS is not empty, format it to delete all files
+    if (used > 0) {
+        ESP_LOGI("SPIFFS", "Formatting SPIFFS to delete all files...");
+        ret = esp_spiffs_format(NULL);  // Format the SPIFFS partition
+        if (ret != ESP_OK) {
+            ESP_LOGE("SPIFFS", "Failed to format SPIFFS (%s)", esp_err_to_name(ret));
+        } else {
+            ESP_LOGI("SPIFFS", "SPIFFS formatted successfully");
+        }
+    }
 }
 
 void SPIFFS_Read(const char *path){
@@ -66,83 +77,40 @@ void SPIFFS_Read(const char *path){
     fclose(f);
 
     ESP_LOGI(SPIFFS_TAG, "Read from file: '%s'", buffer);
-    ESP_LOGI(SPIFFS_TAG, "Read %d from file:", bytesRead);
+    ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
 }
 
 void SPIFFS_Write(const char *path, const char *data){
-    // First create a file.
-    ESP_LOGI(SPIFFS_TAG, "Opening file");
-    FILE* f = fopen(path, "w");
+    // Append data to file
+    ESP_LOGI(SPIFFS_TAG, "Appending to file");
+    FILE* f = fopen(path, "a");
     if (f == NULL) {
-        ESP_LOGE(SPIFFS_TAG, "Failed to open file for writing");
+        ESP_LOGE(SPIFFS_TAG, "Failed to open file for appending");
         return;
     }
-    fprintf(f, data);
+    
+    if(fprintf(f, data) < 0){
+        ESP_LOGE(SPIFFS_TAG, "Failed to write data to file: %s", path);
+        fclose(f);
+        return;
+    }
     fflush(f);
     fclose(f);
-    ESP_LOGI(SPIFFS_TAG, "File written");
+    ESP_LOGI(SPIFFS_TAG, "File written successfully.");
+}
+
+void SPIFFS_Clear(const char *path){
+    // Reopen the file in write mode to clear 
+    ESP_LOGI(SPIFFS_TAG, "Clearing file");
+    FILE* f = fopen(path, "w");
+    if (f == NULL) {
+        ESP_LOGE(SPIFFS_TAG, "Failed to open file for clearing");
+        return;
+    }
+
+    fclose(f);
+    ESP_LOGI(SPIFFS_TAG, "File cleared successfully.");
 }
 
 /********************************Public Functions***********************************/
 
-// OLD CODE - May be useful in future
-/*
-void Dump_Data_task(void *args){
-    bool dump_data = false; 
-
-    // Create variables for SPIFFS
-    const char *file_path = "/spiffs/data.csv"; 
-
-    // Open the file to dump to
-    FILE *file = fopen(file_path, "w");
-    if (file == NULL) {
-        ESP_LOGE(SPIFFS_TAG, "Failed to open file for writing");
-        return;
-    }
-
-    // Send CSV header
-    fprintf(file, "Tick Count,Accel X,Accel Y,Accel Z,Gyro X,Gyro Y,Gyro Z,Magno X,Magno Y,Magno Z\n");
-    fflush(file);
-
-    // Create variables to store data values 
-    float current_time; 
-    int16_t sensor_vals[9];
-
-    // Create buffer for data 
-    int16_t data;
-
-    while(1){
-        // Wait for signal to dump data and take control of SPI
-        if (dump_data && xSemaphoreTake(SPI_sem, 10) == pdTRUE) {
-            // Read items in the queue 
-            int i = 0;
-            while(xQueueReceive(data_queue, &data, 0) == pdTRUE){
-                sensor_vals[i++] = data; 
-                // TODO: Update to 9 once magno values are being read 
-                if(i == 6) {
-                     // Get current tick count
-                    current_time = (float)xTaskGetTickCount() / configTICK_RATE_HZ;
-                    
-                    fprintf(file, "%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-                        current_time,
-                        sensor_vals[0], sensor_vals[1], sensor_vals[2],
-                        sensor_vals[3], sensor_vals[4], sensor_vals[5],
-                        0, 0, 0); // TODO: Update to use sensor value once magno is read
-                    fflush(file);
-                    i = 0; 
-                }
-            }
-            // Release the SPI semaphore
-            xSemaphoreGive(SPI_sem); 
-
-            // Close file 
-            fclose(file);
-            SPIFFS_Read(file_path);
-             
-            // Kill self 
-            vTaskDelete(NULL); 
-        }
-        else {}
-        vTaskDelay(1); 
-    }
-} */
