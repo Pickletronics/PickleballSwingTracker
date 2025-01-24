@@ -261,6 +261,62 @@ void Timer_task(void *args){
     }       
 }
 
+void SPIFFS_Test_task(void *args){
+    // Create variables for SPIFFS
+    const char *file_path = "/spiffs/test.txt"; 
+    SPIFFS_Clear(file_path);
+
+    // Instantiate testing struct 
+    SPIFFS_test_t test_data;
+    test_data.blah = 0;
+    test_data.blah2 = 1; 
+    test_data.blah3 = 2; 
+    
+    while(1){
+        // "Randomize" the struct data 
+        test_data.blah++;
+        test_data.blah2++;
+        test_data.blah3++;
+
+        // Spawn new thread 
+        xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
+        xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
+
+
+        vTaskDelay(1000);
+    }
+}
+
+void SPIFFS_Write_task(void *args){
+    // Create variables for SPIFFS
+    const char *file_path = "/spiffs/test.txt"; 
+
+    // Get the passed in data
+    SPIFFS_test_t *data = (SPIFFS_test_t *)args; 
+
+    while(1){
+        // printf("%d,%d,%f\n", data->blah, data->blah2, data->blah3);
+        if (xSemaphoreTake(SPIFFS_sem, 0) == pdTRUE) {
+            // Create string of passed in data
+            char buffer[64];
+            sprintf(buffer, "%d,%d,%d\n", data->blah, data->blah2, data->blah3);
+
+            // Write the data 
+            SPIFFS_Write(file_path, buffer);
+            SPIFFS_Read(file_path); // For testing
+
+            // Give up the semaphore 
+            xSemaphoreGive(SPIFFS_sem);
+
+            // Killself 
+            vTaskDelete(NULL);
+        }
+        else {}
+    }
+}
+
+
+
 /********************************Public Functions***********************************/
 
 /****************************Interrupt Service Routines*****************************/

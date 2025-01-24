@@ -26,6 +26,7 @@
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
 extern SemaphoreHandle_t Button_sem;
+extern SemaphoreHandle_t SPIFFS_sem;
 extern gptimer_handle_t Button_timer;
 extern QueueHandle_t Button_queue;
 extern QueueHandle_t Sample_queue; 
@@ -49,6 +50,12 @@ typedef struct vector3D_t {
     float x, y, z;
 } vector3D_t;
 
+typedef struct SPIFFS_test_t {
+    uint16_t blah;
+    uint16_t blah2;
+    uint16_t blah3;
+} SPIFFS_test_t;
+
 /****************************Data Structure Definitions*****************************/
 
 /********************************Public Functions***********************************/
@@ -57,6 +64,8 @@ void Sample_Sensor_task(void *args);
 void Button_task(void *args);
 void Process_Data_task(void *args); 
 void Timer_task(void *args);
+void SPIFFS_Test_task(void *args);
+void SPIFFS_Write_task(void *args);
 
 /********************************Public Functions***********************************/
 
