@@ -25,6 +25,7 @@
 
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
+extern SemaphoreHandle_t UART_sem;
 extern SemaphoreHandle_t Button_sem;
 extern SemaphoreHandle_t SPIFFS_sem;
 extern gptimer_handle_t Button_timer;

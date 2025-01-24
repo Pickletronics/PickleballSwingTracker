@@ -27,8 +27,8 @@ data_processing_packet_t packets[MAX_NUM_PACKETS];
 void Sample_Sensor_task(void *args) {
     IMU_sample_t sample;
     uint32_t sample_count = 0;
-    const uint32_t NUM_SAMPLES_WAIT = 100;
-    const uint32_t NUM_SAMPLES_TOTAL = 200;
+    const uint32_t NUM_SAMPLES_WAIT = 400;
+    const uint32_t NUM_SAMPLES_TOTAL = NUM_SAMPLES_WAIT*2;
 
     // uint32_t num_samples = 0;
     // TickType_t init_time_sec = xTaskGetTickCount();
@@ -37,8 +37,12 @@ void Sample_Sensor_task(void *args) {
 
     // impact settings
     const float IMPACT_CHANGE_THRESHOLD = 20.0f;
+    const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
+    float prev_accel_magnitude = 0.0f; // FIXME: issue at t=0?
 
     // for demo, led init/vars
+    const TickType_t LED_on_time = pdMS_TO_TICKS(500);
+    TickType_t last_impact_time = 0;
     const gpio_num_t LED_PIN = 2;
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
@@ -65,19 +69,38 @@ void Sample_Sensor_task(void *args) {
         // write data
         Circular_Buffer_Write(IMU_BUFFER, sample);
 
-        // check for impact (double tap button to test)
-
+        /* check for impact (double tap button to test)*/
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
             sample.IMU.accel.x * SENSITIVITY,
             sample.IMU.accel.y * SENSITIVITY,
             sample.IMU.accel.z * SENSITIVITY
         };
+        float accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+        float magnitude_change = fabs(accel_magnitude - prev_accel_magnitude);
+
+        // Check for impact based on change in magnitude (ignore other "impacts" for IMPACT_BUFFER_TIME ms)
+        if ((magnitude_change > IMPACT_CHANGE_THRESHOLD) && (xTaskGetTickCount() - last_impact_time > IMPACT_BUFFER_TIME)) {
+            // Impact detected
+            last_impact_time = xTaskGetTickCount();
+            impact_detected = true;
+            // printf("Imapct at %ld\n", last_impact_time);
+        }
+
+        // FIXME: for demo, turn on led for 1/2 sec
+        if (xTaskGetTickCount() - last_impact_time < LED_on_time) {
+            gpio_set_level(LED_PIN, 1);
+        }
+        else {
+            gpio_set_level(LED_PIN, 0);
+        }
+
+        // Update the previous magnitude for the next iteration
+        prev_accel_magnitude = accel_magnitude;
 
         if (impact_detected) {
             // start counting samples to the right
             sample_count++;
-            gpio_set_level(LED_PIN, 1);
 
             // once desired number of samples, dump buffer and spawn processing thread
             if (sample_count >= NUM_SAMPLES_WAIT) {
@@ -102,14 +125,13 @@ void Sample_Sensor_task(void *args) {
                     packets[packet_index].processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
 
                     // spawn data processing thread
-                    printf("Sending packet #%d\n", packet_index);
+                    // printf("Sending packet #%d\n", packet_index);
                     xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 2048, (void*)&packets[packet_index], 1, NULL, 1);                 
                 }
 
                 // reset necessary variables
                 sample_count = 0;
                 impact_detected = false;
-                gpio_set_level(LED_PIN, 0);
             }
         }
     }   
@@ -118,19 +140,50 @@ void Sample_Sensor_task(void *args) {
 void Process_Data_task(void *args) {
 
     data_processing_packet_t* packet = (data_processing_packet_t*) args;
-    printf("Packet received!\n");
+    // printf("Packet received!\n");
 
     while (1) {
 
-        // print check for buffer
-        // for (uint32_t i = 0; i < packet->num_samples; i++) {
-        //     printf("%d\n", packet->processing_buffer[i].IMU.accel.x);
-        // }
+        // acquire UART sem
+        if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
+            for (uint32_t i = 0; i < packet->num_samples; i++) {
+
+                // Convert raw accelerometer values to m/s^2
+                vector3D_t accel_real = {
+                    packet->processing_buffer[i].IMU.accel.x * SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.y * SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.z * SENSITIVITY
+                };
+
+                union {
+                    float accel_magnitude;
+                    uint32_t accel_magnitude_u32;
+                } float_union;
+
+                float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+
+                // output data over uart
+                char byte_data[4] = {
+                    (float_union.accel_magnitude_u32 >> 0) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 8) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 16) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 24) & 0xFF
+                };
+
+                UART_write(byte_data, 4);
+
+                // printf("%f\n", float_union.accel_magnitude);
+            }
+
+            // Give up the semaphore 
+            xSemaphoreGive(UART_sem);
+        }
 
         // simulate work
-        vTaskDelay(2000 + rand() % (8000 - 2000 + 1));
+        // vTaskDelay(2000 + rand() % (8000 - 2000 + 1));
+        vTaskDelay(pdTICKS_TO_MS(100));
 
-        printf("Freeing packet #%ld\n", packet->packet_num);
+        // printf("Freeing packet #%ld\n", packet->packet_num);
         free(packet->processing_buffer);
         packet->active = false;
 
@@ -281,7 +334,6 @@ void SPIFFS_Test_task(void *args){
         // Spawn new thread 
         xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
         xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
-
 
         vTaskDelay(1000);
     }
