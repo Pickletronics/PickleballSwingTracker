@@ -38,7 +38,6 @@ void app_main(void) {
     // xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4096, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Timer_task, "Timer_task", 2048, NULL, 1, NULL, 1);
-    // xTaskCreate(SEM_test, "SEM_TEST", 2048, NULL, 1, NULL);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);

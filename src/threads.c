@@ -15,31 +15,11 @@ volatile int8_t num_presses = 0;
 // for testing purposes
 bool impact_detected = false;
 
+data_processing_packet_t packets[MAX_NUM_PACKETS];
+
 /********************************Public Variables***********************************/
 
 /********************************Public Functions***********************************/
-
-void SEM_test(void *args) {
-    TickType_t start, end;
-
-    while (1) {
-        if (xSemaphoreTake(SPI_sem, 0) == pdTRUE) {
-            start = xTaskGetTickCount();
-
-            // simulate variable work
-            vTaskDelay(rand() % 101);
-
-            // release semaphore
-            xSemaphoreGive(SPI_sem);
-            end = xTaskGetTickCount();
-
-            printf("\nSemaphore held for %.2f seconds\n", ((float)(end-start))/configTICK_RATE_HZ);
-        }
-        else {}
-
-        vTaskDelay(1);
-    }
-}
 
 // Sampling task
 // Reads accelerometer and gyroscope data from IMU 
@@ -50,10 +30,13 @@ void Sample_Sensor_task(void *args) {
     const uint32_t NUM_SAMPLES_WAIT = 100;
     const uint32_t NUM_SAMPLES_TOTAL = 200;
 
-    uint32_t num_samples = 0;
-    TickType_t init_time_sec = xTaskGetTickCount();
-    TickType_t curr_time_sec = xTaskGetTickCount();
-    TickType_t one_sec = pdMS_TO_TICKS(1000);
+    // uint32_t num_samples = 0;
+    // TickType_t init_time_sec = xTaskGetTickCount();
+    // TickType_t curr_time_sec = xTaskGetTickCount();
+    // TickType_t one_sec = pdMS_TO_TICKS(1000);
+
+    // impact settings
+    const float IMPACT_CHANGE_THRESHOLD = 20.0f;
 
     // for demo, led init/vars
     const gpio_num_t LED_PIN = 2;
@@ -84,6 +67,13 @@ void Sample_Sensor_task(void *args) {
 
         // check for impact (double tap button to test)
 
+        // Convert raw accelerometer values to m/s^2
+        vector3D_t accel_real = {
+            sample.IMU.accel.x * SENSITIVITY,
+            sample.IMU.accel.y * SENSITIVITY,
+            sample.IMU.accel.z * SENSITIVITY
+        };
+
         if (impact_detected) {
             // start counting samples to the right
             sample_count++;
@@ -91,16 +81,30 @@ void Sample_Sensor_task(void *args) {
 
             // once desired number of samples, dump buffer and spawn processing thread
             if (sample_count >= NUM_SAMPLES_WAIT) {
-                // populate data processing buffer
-                IMU_sample_t* processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
-
-                // print check for buffer
-                for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
-                    printf("%d\n", processing_buffer[i].IMU.accel.x);
+                // find free packet
+                int8_t packet_index = -1;
+                for (int8_t i = 0; i < MAX_NUM_PACKETS; i++) {
+                    if (!packets[i].active) {
+                        packet_index = i;
+                        break;
+                    }
                 }
 
-                // spawn data processing thread
-                free(processing_buffer); // thread will be responsible for this
+                if (packet_index == -1) {
+                    printf("Max packets being processed.\n");
+                }
+                else {
+                    // populate data processing buffer
+                    packets[packet_index].active = true;
+                    packets[packet_index].packet_num = packet_index;
+                    packets[packet_index].num_samples = NUM_SAMPLES_TOTAL;
+                    packets[packet_index].impact_start_index = NUM_SAMPLES_TOTAL - NUM_SAMPLES_WAIT;
+                    packets[packet_index].processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
+
+                    // spawn data processing thread
+                    printf("Sending packet #%d\n", packet_index);
+                    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 2048, (void*)&packets[packet_index], 1, NULL, 1);                 
+                }
 
                 // reset necessary variables
                 sample_count = 0;
@@ -109,6 +113,30 @@ void Sample_Sensor_task(void *args) {
             }
         }
     }   
+}
+
+void Process_Data_task(void *args) {
+
+    data_processing_packet_t* packet = (data_processing_packet_t*) args;
+    printf("Packet received!\n");
+
+    while (1) {
+
+        // print check for buffer
+        // for (uint32_t i = 0; i < packet->num_samples; i++) {
+        //     printf("%d\n", packet->processing_buffer[i].IMU.accel.x);
+        // }
+
+        // simulate work
+        vTaskDelay(2000 + rand() % (8000 - 2000 + 1));
+
+        printf("Freeing packet #%ld\n", packet->packet_num);
+        free(packet->processing_buffer);
+        packet->active = false;
+
+        vTaskDelete(NULL);
+    }
+    
 }
 
 /*
