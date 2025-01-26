@@ -20,6 +20,8 @@
 #define MPU9250_WHOAMI          117
 #define MPU_9250_PWR_MGMT_1     107
 
+#define SENSITIVITY             (4.0f * 9.81f / 32768.0f)
+
 #define ACCEL_CFG_1             28
 #define ACCEL_CFG_2             29
 #define ACCEL_XH                59

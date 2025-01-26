@@ -16,12 +16,16 @@
 /************************************Includes***************************************/
 
 /*************************************Defines***************************************/
+
+#define MAX_NUM_PACKETS      3
+
 /*************************************Defines***************************************/
 
 /***********************************Externs*****************************************/
 
 extern MPU9250_handle_t mpu;
 extern SemaphoreHandle_t SPI_sem;
+extern SemaphoreHandle_t UART_sem;
 extern SemaphoreHandle_t Button_sem;
 extern SemaphoreHandle_t SPIFFS_sem;
 extern gptimer_handle_t Button_timer;
@@ -35,9 +39,17 @@ extern int esp_clk_cpu_freq();
 
 /****************************Data Structure Definitions*****************************/
 
-typedef struct Vector3D {
+typedef struct data_processing_packet_t {
+    bool active;
+    uint32_t packet_num;
+    uint32_t num_samples;
+    uint32_t impact_start_index;
+    IMU_sample_t* processing_buffer;
+} data_processing_packet_t;
+
+typedef struct vector3D_t {
     float x, y, z;
-} Vector3D;
+} vector3D_t;
 
 typedef struct SPIFFS_test_t {
     uint16_t blah;
@@ -49,7 +61,6 @@ typedef struct SPIFFS_test_t {
 
 /********************************Public Functions***********************************/
 
-void SEM_test(void *args);
 void Sample_Sensor_task(void *args); 
 void Button_task(void *args);
 void Process_Data_task(void *args); 

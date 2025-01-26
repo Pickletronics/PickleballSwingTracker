@@ -65,7 +65,7 @@ void SPIFFS_init() {
 }
 
 void SPIFFS_Read(const char *path){
-    ESP_LOGI(SPIFFS_TAG, "Reading file");
+    // ESP_LOGI(SPIFFS_TAG, "Reading file");
     FILE* f = fopen(path, "r");
     if (f == NULL) {
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for reading");
@@ -76,13 +76,13 @@ void SPIFFS_Read(const char *path){
     buffer[bytesRead] = '\0'; 
     fclose(f);
 
-    ESP_LOGI(SPIFFS_TAG, "Read from file: '%s'", buffer);
-    ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
+    // ESP_LOGI(SPIFFS_TAG, "Read from file: '%s'", buffer);
+    // ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
 }
 
 void SPIFFS_Write(const char *path, const char *data){
     // Append data to file
-    ESP_LOGI(SPIFFS_TAG, "Appending to file");
+    // ESP_LOGI(SPIFFS_TAG, "Appending to file");
     FILE* f = fopen(path, "a");
     if (f == NULL) {
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for appending");
@@ -96,7 +96,7 @@ void SPIFFS_Write(const char *path, const char *data){
     }
     fflush(f);
     fclose(f);
-    ESP_LOGI(SPIFFS_TAG, "File written successfully.");
+    // ESP_LOGI(SPIFFS_TAG, "File written successfully.");
 }
 
 void SPIFFS_Clear(const char *path){
