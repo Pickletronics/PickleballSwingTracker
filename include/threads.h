@@ -17,7 +17,8 @@
 
 /*************************************Defines***************************************/
 
-#define MAX_NUM_PACKETS      3
+#define MAX_PROCESSING_PACKETS      3
+#define MAX_SPIFFS_PACKETS          2*MAX_PROCESSING_PACKETS
 
 /*************************************Defines***************************************/
 
@@ -39,32 +40,34 @@ extern int esp_clk_cpu_freq();
 
 /****************************Data Structure Definitions*****************************/
 
+typedef struct vector3D_t {
+    float x, y, z;
+} vector3D_t;
+
 typedef struct data_processing_packet_t {
+    char* SPIFFS_file_path;
     bool active;
-    uint32_t packet_num;
     uint32_t num_samples;
     uint32_t impact_start_index;
     IMU_sample_t* processing_buffer;
 } data_processing_packet_t;
 
-typedef struct vector3D_t {
-    float x, y, z;
-} vector3D_t;
-
-typedef struct SPIFFS_test_t {
-    uint16_t blah;
-    uint16_t blah2;
-    uint16_t blah3;
-} SPIFFS_test_t;
+typedef struct SPIFFS_packet_t {
+    char* SPIFFS_file_path;
+    bool active;
+    uint16_t test_1;
+    uint16_t test_2;
+    uint16_t test_3;
+} SPIFFS_packet_t;
 
 /****************************Data Structure Definitions*****************************/
 
 /********************************Public Functions***********************************/
 
-void Sample_Sensor_task(void *args); 
+void Play_Session_task(void *args); 
 void Button_task(void *args);
 void Process_Data_task(void *args); 
-void Timer_task(void *args);
+void Button_Manager_task(void *args);
 void SPIFFS_Test_task(void *args);
 void SPIFFS_Write_task(void *args);
 
