@@ -26,10 +26,10 @@ void app_main(void) {
     // Initialize modules
     SPI_Init(); 
     UART_init();
-    Button_Init();
     MPU9250_Init();
     BLE_Start(); 
     SPIFFS_init(); 
+    Button_Init();
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
@@ -38,11 +38,10 @@ void app_main(void) {
     SPIFFS_sem = xSemaphoreCreateMutex();
 
     // Spawn threads
-    xTaskCreatePinnedToCore(Sample_Sensor_task, "Sample_task", 4096, NULL, 1, NULL, 0);
-    // xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4096, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(Timer_task, "Timer_task", 2048, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(SPIFFS_Test_task, "SPIFFS_Test_task", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(Button_Manager_task, "Button_Manager_task", 2048, NULL, 1, NULL, 1);
+    // xTaskCreatePinnedToCore(SPIFFS_Test_task, "SPIFFS_Test_task", 4096, NULL, 1, NULL, 0);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);

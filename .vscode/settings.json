@@ -14,6 +14,14 @@
         "task.h": "c",
         "freertosconfig.h": "c",
         "button.h": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "*.tcc": "c",
+        "ctime": "c",
+        "limits": "c",
+        "numeric": "c",
+        "ratio": "c",
+        "streambuf": "c",
+        "tuple": "c",
+        "type_traits": "c"
     }
 }
