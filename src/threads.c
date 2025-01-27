@@ -15,8 +15,10 @@ volatile int8_t num_presses = 0;
 // for testing purposes
 bool impact_detected = false;
 
-data_processing_packet_t play_session_packets[MAX_PROCESSING_PACKETS];
-SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_PACKETS];
+uint8_t active_processing_threads = 0;
+uint8_t active_SPIFFS_write_threads = 0;
+data_processing_packet_t play_session_packets[MAX_PROCESSING_THREADS];
+SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_THREADS];
 
 /********************************Public Variables***********************************/
 
@@ -120,7 +122,7 @@ void Play_Session_task(void *args) {
             if (sample_count >= NUM_SAMPLES_WAIT) {
                 // find free packet
                 int8_t packet_index = -1;
-                for (int8_t i = 0; i < MAX_PROCESSING_PACKETS; i++) {
+                for (int8_t i = 0; i < MAX_PROCESSING_THREADS; i++) {
                     if (!play_session_packets[i].active) {
                         packet_index = i;
                         break;
@@ -153,6 +155,7 @@ void Play_Session_task(void *args) {
 
 void Process_Data_task(void *args) {
 
+    active_processing_threads++;
     data_processing_packet_t* packet = (data_processing_packet_t*) args;
 
     while (1) {
@@ -199,7 +202,7 @@ void Process_Data_task(void *args) {
 
         // find free packet
         int8_t packet_index = -1;
-        for (int8_t i = 0; i < MAX_SPIFFS_PACKETS; i++) {
+        for (int8_t i = 0; i < MAX_SPIFFS_THREADS; i++) {
             if (!SPIFFS_packets[i].active) {
                 packet_index = i;
                 break;
@@ -227,6 +230,7 @@ void Process_Data_task(void *args) {
         free(packet->processing_buffer);
         packet->active = false;
 
+        ESP_LOGI(PROCESSING_TAG, "Deleting processing thread | # Active: (%d)", --active_processing_threads);
         vTaskDelete(NULL);
     }
     
@@ -287,6 +291,143 @@ void SPIFFS_Write_task(void *args){
 
 
 
+void FSM_task(void *args){
+    int8_t button_input;
+
+    state_t state_handler = {
+        .current_state = START,
+        .next_state = START,
+        .skip_button_input = false,
+    };
+
+    while (1)
+    {
+        // Recieve button input from queue - block if no presses unless state requires skip
+        if (state_handler.skip_button_input || (xQueueReceive(Button_queue, &button_input, portMAX_DELAY) == pdTRUE)) {
+            printf("Button input: %d\n", button_input);
+
+            // state transitions
+            switch (state_handler.current_state) {
+                case START:
+
+                    switch (button_input) {
+                        case HOLD:
+                            state_handler.next_state = RESET;
+                            state_handler.skip_button_input = true;
+                            break;
+                        case SINGLE_PRESS:
+                            state_handler.next_state = PLAY_SESSION;
+                            break;
+                        case DOUBLE_PRESS:
+                            state_handler.next_state = BLE_SESSION;
+                            break;
+                        default:
+                            state_handler.next_state = state_handler.current_state;
+                            break;
+                    }
+
+                    break;
+
+                case RESET:
+
+                    // simulate time to reset
+                    vTaskDelay(1000);
+
+                    printf("Reset successful\n");
+                    state_handler.next_state = START;
+                    state_handler.skip_button_input = false;
+
+                    break;
+
+                case PLAY_SESSION:
+
+                    switch (button_input) {
+                        case HOLD:
+                            state_handler.next_state = RESET;
+                            state_handler.skip_button_input = true;
+                            break;
+                        case SINGLE_PRESS:
+                            vTaskDelete(state_handler.task_handles.Play_Session_Handle);
+                            state_handler.task_handles.Play_Session_Handle = NULL;
+                            state_handler.play_session_active = false;
+                            state_handler.next_state = START;
+
+                            ESP_LOGI(FSM_TAG,"Play session ended");
+                            break;
+                        default:
+                            state_handler.next_state = state_handler.current_state;
+                            break;
+                    }
+
+                    break;
+
+                case BLE_SESSION:
+
+                    switch (button_input) {
+                        case HOLD:
+                            state_handler.next_state = RESET;
+                            state_handler.skip_button_input = true;
+                            break;
+                        case DOUBLE_PRESS:
+                            printf("Ending BLE session\n");
+                            state_handler.next_state = START;
+                            break;
+                        default:
+                            state_handler.next_state = state_handler.current_state;
+                            break;
+                    }
+
+                    break;
+
+                default:
+                    state_handler.next_state = START;
+                    break;
+            }
+
+            // update state
+            state_handler.current_state = state_handler.next_state;
+
+            // handle current state
+            printf("Current state: ");
+            switch (state_handler.current_state) {
+                case START:
+                    printf("START\n");
+                    break;
+
+                case RESET:
+                    printf("RESET\n");
+                    break;
+                    
+                case PLAY_SESSION:
+                    printf("PLAY SESSION\n");
+
+                    // spawn play session - only one active at a time
+                    if (!state_handler.play_session_active) {
+
+                        if (state_handler.task_handles.Play_Session_Handle == NULL) {
+                            xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, &state_handler.task_handles, 1, &state_handler.task_handles.Play_Session_Handle, 0);
+                            state_handler.play_session_active = true;
+                            ESP_LOGI(FSM_TAG,"Play session started");
+                        }
+                        else {
+                            ESP_LOGE(FSM_TAG,"Play_Session_Handle is not null");
+                        }
+                    }
+
+                    break;
+
+                case BLE_SESSION:
+                    printf("BLE SESSION\n");
+                    break;
+
+                default:
+                    printf("INVALID\n");
+                    break;
+            }
+        }
+    }       
+}
+
 void Button_task(void *args) {
     TickType_t curr_time, press_time;
     const TickType_t debounce_time = pdMS_TO_TICKS(30);
@@ -323,31 +464,6 @@ void Button_task(void *args) {
             gpio_intr_enable(BUTTON_PIN);
         }
     }
-}
-
-void Button_Manager_task(void *args){
-    int8_t Button_input;
-
-    while (true)
-    {
-        // Recieve button input from queue
-        if (xQueueReceive(Button_queue, &Button_input, pdMS_TO_TICKS(10))) {
-            if (Button_input == -1) {
-                Dump_data = !Dump_data;
-                printf("Hold detected!\n");
-            }
-            else {
-                printf("Number of presses detected: %d\n", Button_input);
-
-                // for testing buffers
-                if (Button_input == 3) {
-                    impact_detected = true;
-                }
-            }
-        }
-        
-        vTaskDelay(5);
-    }       
 }
 
 /********************************Public Functions***********************************/
