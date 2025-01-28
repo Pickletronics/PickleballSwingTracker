@@ -11,6 +11,7 @@
 
 char *BLE_TAG = "BLE-Server";
 uint8_t ble_addr_type;
+uint8_t curr_session = 0;
 
 static const struct ble_gatt_svc_def gatt_svcs[] = {
     {.type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -46,6 +47,9 @@ void BLE_Start(){
     ble_gatts_count_cfg(gatt_svcs);            // 4 - Initialize NimBLE configuration - config gatt services
     ble_gatts_add_svcs(gatt_svcs);             // 4 - Initialize NimBLE configuration - queues gatt services.
 
+    // Set the preferred MTU size (controls how many bytes can be sent at once)
+    ble_att_set_preferred_mtu(BLE_PAYLOAD_SIZE); 
+
     // Set the sync callback 
     ble_hs_cfg.sync_cb = BLE_Sync;      // 5 - Initialize application
 
@@ -57,22 +61,31 @@ void BLE_Start(){
 // one characteristic, and aren't passing in extra args right now. 
 // Need these parameters to be compliant with the NimBLE API. 
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg){
-    // // Create buffer for data 
-    // int16_t data[3];
-    // int i = 0;
+    // printf("%d\n", curr_session);
+    // printf("%d\n", SPIFFS_files.num_files); 
+    // printf("%s\n", SPIFFS_files.file_path[curr_session]);
+    if(curr_session < SPIFFS_files.num_files){
+         // Create buffer to store SPIFFS data
+        char *buffer = malloc(BLE_PAYLOAD_SIZE);
+        size_t bytesRead = SPIFFS_Dump(SPIFFS_files.file_path[curr_session], buffer, BLE_PAYLOAD_SIZE);
+        // size_t bytesRead = SPIFFS_Dump("/spiffs/session_0.txt", buffer, BLE_PAYLOAD_SIZE);
+        printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
 
-    // // Read items in the queue 
-    // while( i < 3 && xQueueReceive(data_queue, &data[i], 0) == pdTRUE){
-    //     printf("Accel val from queue = %d\n", data[i]);
-
-    //     // Append the data to the ble buffer
-    //     os_mbuf_append(ctxt->om, &data[i], sizeof(data[i]));
-    //     i++;
-    // }
-
-    // Send Hello World
-    os_mbuf_append(ctxt->om, "Hello World!", sizeof("Hello World!"));
-
+        // If file was not empty (or fully read), send the bytes read
+        if(bytesRead > 0){
+            os_mbuf_append(ctxt->om, buffer, bytesRead);
+        }
+        // Otherwise send empty file message and move to next file if applicable.
+        else{
+            curr_session++; 
+            os_mbuf_append(ctxt->om, "End of file reached.", sizeof("End of file reached."));
+        }
+        free(buffer);
+    }
+    else {
+        os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
+    }
+   
     return 0; 
 }
 
@@ -103,14 +116,14 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
     case BLE_GAP_EVENT_CONNECT: 
         if(event->connect.status != 0){
             BLE_Advertise(); 
-            printf("Connected Successfully!\n"); 
+            // printf("Connection failed."); 
             break; 
         }
-        printf("Connection failed."); 
+        printf("Connected Successfully!\n"); 
         break; 
 
     case BLE_GAP_EVENT_DISCONNECT: 
-        printf("Connection terminated. Ending bluetooth session."); 
+        printf("Connection terminated. Ending bluetooth session.\n"); 
         nimble_port_stop(); 
         break;
 

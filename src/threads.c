@@ -11,12 +11,18 @@
 bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
+uint8_t num_sessions = 0; 
 
 // for testing purposes
 bool impact_detected = false;
+bool dump = false; 
 
 data_processing_packet_t play_session_packets[MAX_PROCESSING_PACKETS];
 SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_PACKETS];
+SPIFFS_files_t SPIFFS_files = {
+    .num_files = 0,
+    .file_path = {NULL}
+};
 
 /********************************Public Variables***********************************/
 
@@ -57,9 +63,21 @@ void Play_Session_task(void *args) {
     const char *file_name = "session_0.txt"; 
     char file_path[64]; 
     sprintf(file_path, "/spiffs/%s", file_name);
-    char buffer[64];
-    sprintf(buffer, "%s\n", file_name);
-    SPIFFS_Write(file_path, buffer);
+
+    // Add file handler to SPIFFS_files if there is space 
+    if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS-1){
+        // Add new session to SPIFFS_files
+        SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+        // Add the header to the file
+        char buffer[64];
+        sprintf(buffer, "%s\n", file_name);
+        SPIFFS_Write(file_path, buffer);
+        SPIFFS_files.num_files++;
+        printf("%d\n", SPIFFS_files.num_files);
+    }
+    else{
+        printf("Error: Max play sessions reached.");
+    }
 
     while(1){
         // read IMU over SPI
@@ -133,6 +151,7 @@ void Play_Session_task(void *args) {
                 }
                 else {
                     // populate data processing buffer
+                    // play_session_packets[packet_index].f = SPIFFS_files[num_sessions].f;
                     play_session_packets[packet_index].SPIFFS_file_path = file_path;
                     play_session_packets[packet_index].active = true;
                     play_session_packets[packet_index].num_samples = NUM_SAMPLES_TOTAL;
@@ -214,6 +233,7 @@ void Process_Data_task(void *args) {
             srand((unsigned int)xTaskGetTickCount());
 
             // populate data processing buffer
+            // SPIFFS_packets[packet_index].f = packet->f;
             SPIFFS_packets[packet_index].SPIFFS_file_path = packet->SPIFFS_file_path;
             SPIFFS_packets[packet_index].active = true;
             SPIFFS_packets[packet_index].test_1 = (uint16_t)rand();
@@ -271,6 +291,7 @@ void SPIFFS_Write_task(void *args){
             sprintf(buffer, "%d,%d,%d\n", packet->test_1, packet->test_2, packet->test_3);
 
             // // Write the data 
+            // SPIFFS_Write(packet->f, buffer);
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
             // SPIFFS_Print(packet->SPIFFS_file_path); // For testing
 
@@ -283,8 +304,6 @@ void SPIFFS_Write_task(void *args){
         
     }
 }
-
-
 
 
 void Button_task(void *args) {
@@ -342,6 +361,13 @@ void Button_Manager_task(void *args){
                 // for testing buffers
                 if (Button_input == 3) {
                     impact_detected = true;
+                }
+                if(Button_input == 2){
+                    // char *buffer = malloc(BLE_PAYLOAD_SIZE);
+                    // // bool status = SPIFFS_Dump(SPIFFS_files[num_sessions].f, buffer);
+                    // bool status = SPIFFS_Dump("/spiffs/session_0.txt", buffer, BLE_PAYLOAD_SIZE);
+                    // printf("dump status: %d\n", status);
+                    SPIFFS_Print("/spiffs/session_0.txt");
                 }
             }
         }

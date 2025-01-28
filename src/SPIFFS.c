@@ -9,6 +9,8 @@
 /********************************Public Variables***********************************/
 
 // const char *SPIFFS_TAG = "SPIFFS";
+// For SPIFFS read
+long dump_position = 0;
 
 /********************************Public Variables***********************************/
 
@@ -64,6 +66,23 @@ void SPIFFS_init() {
     }
 }
 
+FILE* SPIFFS_Open_File(const char *path){
+    FILE* f = fopen(path, "a+");
+    if (f == NULL) {
+        ESP_LOGE(SPIFFS_TAG, "Failed to open file.");
+        return NULL;
+    }
+    return f;
+}
+
+bool SPIFFS_Close_File(FILE* f){
+    if(fclose(f) == -1){
+        return false; 
+    }
+    return true; 
+}
+
+// void SPIFFS_Print(FILE* f){
 void SPIFFS_Print(const char *path){
     // ESP_LOGI(SPIFFS_TAG, "Reading file");
     FILE* f = fopen(path, "r");
@@ -80,6 +99,33 @@ void SPIFFS_Print(const char *path){
     // ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
 }
 
+// bool SPIFFS_Dump(FILE* f, char *buffer){
+size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
+    // Open file
+    FILE* f = fopen(path, "r");
+    if (f == NULL) {
+        ESP_LOGE(SPIFFS_TAG, "Failed to open file for reading");
+        return 0;
+    }
+    // set the pointer to the current position
+    fseek(f, dump_position, SEEK_SET);
+
+    size_t bytesRead; 
+    // Read payload size amount of bytes in buffer
+    if((bytesRead = fread(buffer, 1, read_size, f)) > 0){
+        printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer);
+        dump_position = ftell(f); 
+        fclose(f);
+        return bytesRead; 
+    }
+    else {
+        dump_position = 0; // Reset dump position for next session file.
+        fclose(f);
+        return 0;
+    }
+}
+
+// void SPIFFS_Write(FILE* f, const char *data){
 void SPIFFS_Write(const char *path, const char *data){
     // Append data to file
     // ESP_LOGI(SPIFFS_TAG, "Appending to file");
@@ -90,13 +136,13 @@ void SPIFFS_Write(const char *path, const char *data){
     }
     
     if(fprintf(f, data) < 0){
-        ESP_LOGE(SPIFFS_TAG, "Failed to write data to file: %s", path);
+        ESP_LOGE(SPIFFS_TAG, "Failed to write data to file");
         fclose(f);
         return;
     }
     fflush(f);
     fclose(f);
-    // ESP_LOGI(SPIFFS_TAG, "File written successfully.");
+    ESP_LOGI(SPIFFS_TAG, "File written successfully.");
 }
 
 void SPIFFS_Clear(const char *path){
