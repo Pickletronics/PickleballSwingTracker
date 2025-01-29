@@ -113,16 +113,14 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     size_t bytesRead; 
     // Read payload size amount of bytes in buffer
     if((bytesRead = fread(buffer, 1, read_size, f)) > 0){
-        printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer);
+        // printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer);
         dump_position = ftell(f); 
-        fclose(f);
-        return bytesRead; 
     }
     else {
         dump_position = 0; // Reset dump position for next session file.
-        fclose(f);
-        return 0;
     }
+    fclose(f);
+    return bytesRead; 
 }
 
 // void SPIFFS_Write(FILE* f, const char *data){

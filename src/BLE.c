@@ -65,10 +65,9 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
     // printf("%d\n", SPIFFS_files.num_files); 
     // printf("%s\n", SPIFFS_files.file_path[curr_session]);
     if(curr_session < SPIFFS_files.num_files){
-         // Create buffer to store SPIFFS data
+        // Create buffer to store SPIFFS data
         char *buffer = malloc(BLE_PAYLOAD_SIZE);
         size_t bytesRead = SPIFFS_Dump(SPIFFS_files.file_path[curr_session], buffer, BLE_PAYLOAD_SIZE);
-        // size_t bytesRead = SPIFFS_Dump("/spiffs/session_0.txt", buffer, BLE_PAYLOAD_SIZE);
         printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
 
         // If file was not empty (or fully read), send the bytes read
@@ -139,9 +138,17 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
     return 0; 
 }
 
+// int mtu_event_handler(struct ble_gap_event *event, void *arg) {
+//     if (event->type == BLE_GAP_EVENT_MTU) {
+//         printf("Negotiated MTU: %d\n", event->mtu.value);
+//     }
+//     return 0;
+// }
+
 void BLE_Sync(){
     ble_hs_id_infer_auto(0, &ble_addr_type);
-    BLE_Advertise();                    
+    BLE_Advertise();    
+    // ble_gap_event_listener_register(mtu_event_handler, NULL); // Register MTU callback                
 }
 
 void BLE_Launch(void *param){

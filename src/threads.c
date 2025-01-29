@@ -293,6 +293,8 @@ void SPIFFS_Write_task(void *args){
             // // Write the data 
             // SPIFFS_Write(packet->f, buffer);
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
             // SPIFFS_Print(packet->SPIFFS_file_path); // For testing
 
             // Give up the semaphore 
@@ -363,11 +365,19 @@ void Button_Manager_task(void *args){
                     impact_detected = true;
                 }
                 if(Button_input == 2){
-                    // char *buffer = malloc(BLE_PAYLOAD_SIZE);
-                    // // bool status = SPIFFS_Dump(SPIFFS_files[num_sessions].f, buffer);
-                    // bool status = SPIFFS_Dump("/spiffs/session_0.txt", buffer, BLE_PAYLOAD_SIZE);
-                    // printf("dump status: %d\n", status);
-                    SPIFFS_Print("/spiffs/session_0.txt");
+                    // Test with 2 sessions 
+                    const char *file_name = "session_1.txt"; 
+                    char file_path[64]; 
+                    sprintf(file_path, "/spiffs/%s", file_name);
+
+                    // Add new session to SPIFFS_files
+                    SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+                    // Add the header to the file
+                    char buffer[64];
+                    sprintf(buffer, "%s\n", file_name);
+                    SPIFFS_Write(file_path, buffer);
+                    SPIFFS_files.num_files++;
+                    printf("%d\n", SPIFFS_files.num_files);
                 }
             }
         }
