@@ -68,7 +68,7 @@ void Play_Session_task(void *args) {
     if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS-1){
         // Add new session to SPIFFS_files
         SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
-        // Add the header to the file
+        // Add the header to the file // TODO: Add meaningful header
         char buffer[64];
         sprintf(buffer, "%s\n", file_name);
         SPIFFS_Write(file_path, buffer);
@@ -151,7 +151,6 @@ void Play_Session_task(void *args) {
                 }
                 else {
                     // populate data processing buffer
-                    // play_session_packets[packet_index].f = SPIFFS_files[num_sessions].f;
                     play_session_packets[packet_index].SPIFFS_file_path = file_path;
                     play_session_packets[packet_index].active = true;
                     play_session_packets[packet_index].num_samples = NUM_SAMPLES_TOTAL;
@@ -233,7 +232,6 @@ void Process_Data_task(void *args) {
             srand((unsigned int)xTaskGetTickCount());
 
             // populate data processing buffer
-            // SPIFFS_packets[packet_index].f = packet->f;
             SPIFFS_packets[packet_index].SPIFFS_file_path = packet->SPIFFS_file_path;
             SPIFFS_packets[packet_index].active = true;
             SPIFFS_packets[packet_index].test_1 = (uint16_t)rand();
@@ -290,12 +288,11 @@ void SPIFFS_Write_task(void *args){
             char buffer[64];
             sprintf(buffer, "%d,%d,%d\n", packet->test_1, packet->test_2, packet->test_3);
 
-            // // Write the data 
-            // SPIFFS_Write(packet->f, buffer);
+            // Write the data 
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-            // SPIFFS_Print(packet->SPIFFS_file_path); // For testing
+            // Can add for easier testing (to make bytes > 247)
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
             // Give up the semaphore 
             packet->active = false;
@@ -364,6 +361,7 @@ void Button_Manager_task(void *args){
                 if (Button_input == 3) {
                     impact_detected = true;
                 }
+                // For testing with an additional session file
                 if(Button_input == 2){
                     // Test with 2 sessions 
                     const char *file_name = "session_1.txt"; 

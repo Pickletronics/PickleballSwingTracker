@@ -48,7 +48,7 @@ void BLE_Start(){
     ble_gatts_add_svcs(gatt_svcs);             // 4 - Initialize NimBLE configuration - queues gatt services.
 
     // Set the preferred MTU size (controls how many bytes can be sent at once)
-    ble_att_set_preferred_mtu(BLE_PAYLOAD_SIZE); 
+    ble_att_set_preferred_mtu(BLE_MTU); 
 
     // Set the sync callback 
     ble_hs_cfg.sync_cb = BLE_Sync;      // 5 - Initialize application
@@ -61,26 +61,25 @@ void BLE_Start(){
 // one characteristic, and aren't passing in extra args right now. 
 // Need these parameters to be compliant with the NimBLE API. 
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg){
-    // printf("%d\n", curr_session);
-    // printf("%d\n", SPIFFS_files.num_files); 
-    // printf("%s\n", SPIFFS_files.file_path[curr_session]);
+    // Make sure there is a valid session to read
     if(curr_session < SPIFFS_files.num_files){
         // Create buffer to store SPIFFS data
         char *buffer = malloc(BLE_PAYLOAD_SIZE);
         size_t bytesRead = SPIFFS_Dump(SPIFFS_files.file_path[curr_session], buffer, BLE_PAYLOAD_SIZE);
         printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
 
-        // If file was not empty (or fully read), send the bytes read
+        // If file was not empty (or fully read), send the data read
         if(bytesRead > 0){
             os_mbuf_append(ctxt->om, buffer, bytesRead);
         }
-        // Otherwise send empty file message and move to next file if applicable.
+        // Otherwise send empty file message and move to next session if applicable.
         else{
             curr_session++; 
             os_mbuf_append(ctxt->om, "End of file reached.", sizeof("End of file reached."));
         }
         free(buffer);
     }
+    // Else you have read all sessions.
     else {
         os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
     }
@@ -138,17 +137,9 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
     return 0; 
 }
 
-// int mtu_event_handler(struct ble_gap_event *event, void *arg) {
-//     if (event->type == BLE_GAP_EVENT_MTU) {
-//         printf("Negotiated MTU: %d\n", event->mtu.value);
-//     }
-//     return 0;
-// }
-
 void BLE_Sync(){
     ble_hs_id_infer_auto(0, &ble_addr_type);
-    BLE_Advertise();    
-    // ble_gap_event_listener_register(mtu_event_handler, NULL); // Register MTU callback                
+    BLE_Advertise();                    
 }
 
 void BLE_Launch(void *param){

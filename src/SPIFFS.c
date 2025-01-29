@@ -8,7 +8,6 @@
 
 /********************************Public Variables***********************************/
 
-// const char *SPIFFS_TAG = "SPIFFS";
 // For SPIFFS read
 long dump_position = 0;
 
@@ -66,23 +65,6 @@ void SPIFFS_init() {
     }
 }
 
-FILE* SPIFFS_Open_File(const char *path){
-    FILE* f = fopen(path, "a+");
-    if (f == NULL) {
-        ESP_LOGE(SPIFFS_TAG, "Failed to open file.");
-        return NULL;
-    }
-    return f;
-}
-
-bool SPIFFS_Close_File(FILE* f){
-    if(fclose(f) == -1){
-        return false; 
-    }
-    return true; 
-}
-
-// void SPIFFS_Print(FILE* f){
 void SPIFFS_Print(const char *path){
     // ESP_LOGI(SPIFFS_TAG, "Reading file");
     FILE* f = fopen(path, "r");
@@ -99,7 +81,6 @@ void SPIFFS_Print(const char *path){
     // ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
 }
 
-// bool SPIFFS_Dump(FILE* f, char *buffer){
 size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     // Open file
     FILE* f = fopen(path, "r");
@@ -111,7 +92,7 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     fseek(f, dump_position, SEEK_SET);
 
     size_t bytesRead; 
-    // Read payload size amount of bytes in buffer
+    // Read size amount of bytes in buffer
     if((bytesRead = fread(buffer, 1, read_size, f)) > 0){
         // printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer);
         dump_position = ftell(f); 
@@ -123,10 +104,8 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     return bytesRead; 
 }
 
-// void SPIFFS_Write(FILE* f, const char *data){
 void SPIFFS_Write(const char *path, const char *data){
     // Append data to file
-    // ESP_LOGI(SPIFFS_TAG, "Appending to file");
     FILE* f = fopen(path, "a");
     if (f == NULL) {
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for appending");
