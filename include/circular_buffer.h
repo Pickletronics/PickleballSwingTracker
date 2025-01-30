@@ -41,6 +41,7 @@ bool Circular_Buffer_Init(uint32_t buffer_index);
 void Circular_Buffer_Write(uint32_t buffer_index, IMU_sample_t data);
 void Circular_Buffer_Peek(uint32_t buffer_index, IMU_sample_t* data);
 void Circular_Buffer_Get_Index(uint32_t buffer_index);
+void Circular_Buffer_Print(uint32_t buffer_index);
 
 // use dynamic allocation
 IMU_sample_t* Circular_Buffer_Sized_DDump(uint32_t buffer_index, uint32_t num_samples_requested);
