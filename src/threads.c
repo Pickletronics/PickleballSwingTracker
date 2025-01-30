@@ -11,12 +11,18 @@
 bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
+uint8_t num_sessions = 0; 
 
 // for testing purposes
 bool impact_detected = false;
+bool dump = false; 
 
 data_processing_packet_t play_session_packets[MAX_PROCESSING_PACKETS];
 SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_PACKETS];
+SPIFFS_files_t SPIFFS_files = {
+    .num_files = 0,
+    .file_path = {NULL}
+};
 
 /********************************Public Variables***********************************/
 
@@ -57,9 +63,21 @@ void Play_Session_task(void *args) {
     const char *file_name = "session_0.txt"; 
     char file_path[64]; 
     sprintf(file_path, "/spiffs/%s", file_name);
-    char buffer[64];
-    sprintf(buffer, "%s\n", file_name);
-    SPIFFS_Write(file_path, buffer);
+
+    // Add file handler to SPIFFS_files if there is space 
+    if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS-1){
+        // Add new session to SPIFFS_files
+        SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+        // Add the header to the file // TODO: Add meaningful header
+        char buffer[64];
+        sprintf(buffer, "%s\n", file_name);
+        SPIFFS_Write(file_path, buffer);
+        SPIFFS_files.num_files++;
+        printf("%d\n", SPIFFS_files.num_files);
+    }
+    else{
+        printf("Error: Max play sessions reached.");
+    }
 
     while(1){
         // read IMU over SPI
@@ -270,9 +288,11 @@ void SPIFFS_Write_task(void *args){
             char buffer[64];
             sprintf(buffer, "%d,%d,%d\n", packet->test_1, packet->test_2, packet->test_3);
 
-            // // Write the data 
+            // Write the data 
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-            // SPIFFS_Print(packet->SPIFFS_file_path); // For testing
+            // Can add for easier testing (to make bytes > 247)
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
             // Give up the semaphore 
             packet->active = false;
@@ -283,8 +303,6 @@ void SPIFFS_Write_task(void *args){
         
     }
 }
-
-
 
 
 void Button_task(void *args) {
@@ -342,6 +360,22 @@ void Button_Manager_task(void *args){
                 // for testing buffers
                 if (Button_input == 3) {
                     impact_detected = true;
+                }
+                // For testing with an additional session file
+                if(Button_input == 2){
+                    // Test with 2 sessions 
+                    const char *file_name = "session_1.txt"; 
+                    char file_path[64]; 
+                    sprintf(file_path, "/spiffs/%s", file_name);
+
+                    // Add new session to SPIFFS_files
+                    SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+                    // Add the header to the file
+                    char buffer[64];
+                    sprintf(buffer, "%s\n", file_name);
+                    SPIFFS_Write(file_path, buffer);
+                    SPIFFS_files.num_files++;
+                    printf("%d\n", SPIFFS_files.num_files);
                 }
             }
         }

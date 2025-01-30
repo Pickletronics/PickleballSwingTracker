@@ -19,6 +19,7 @@
 
 #define MAX_PROCESSING_PACKETS      3
 #define MAX_SPIFFS_PACKETS          2*MAX_PROCESSING_PACKETS
+#define MAX_PLAY_SESSIONS           5
 
 /*************************************Defines***************************************/
 
@@ -45,6 +46,7 @@ typedef struct vector3D_t {
 } vector3D_t;
 
 typedef struct data_processing_packet_t {
+    // FILE* f;
     char* SPIFFS_file_path;
     bool active;
     uint32_t num_samples;
@@ -53,6 +55,7 @@ typedef struct data_processing_packet_t {
 } data_processing_packet_t;
 
 typedef struct SPIFFS_packet_t {
+    // FILE* f;
     char* SPIFFS_file_path;
     bool active;
     uint16_t test_1;
@@ -60,6 +63,11 @@ typedef struct SPIFFS_packet_t {
     uint16_t test_3;
 } SPIFFS_packet_t;
 
+typedef struct SPIFFS_files_t {
+    uint8_t num_files; 
+    char* file_path[MAX_PLAY_SESSIONS];
+} SPIFFS_files_t;
+extern SPIFFS_files_t SPIFFS_files;
 /****************************Data Structure Definitions*****************************/
 
 /********************************Public Functions***********************************/
