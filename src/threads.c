@@ -327,10 +327,12 @@ void FSM_task(void *args){
                                 } else {
                                     ESP_LOGE(FSM_TAG, "Play_Session_task still running (state: %d)", task_state);
                                 }
-
                             }
                             else {
-                                ESP_LOGE(FSM_TAG,"Failed to end play session");
+                                ESP_LOGE(FSM_TAG,"Play_Session_task exitted abnormally");
+                                state_handler.Play_Session_Handle = NULL;
+                                state_handler.play_session_active = false;
+                                state_handler.next_state = START;
                             }
                             break;
                         default:
