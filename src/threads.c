@@ -12,11 +12,7 @@ bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
 
-// for testing purposes
-bool impact_detected = false;
-
-uint8_t active_processing_threads = 0;
-uint8_t active_SPIFFS_write_threads = 0;
+uint8_t session_id = 0;
 data_processing_packet_t play_session_packets[MAX_PROCESSING_THREADS];
 SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_THREADS];
 
@@ -34,16 +30,15 @@ void Play_Session_task(void *args) {
     const uint32_t NUM_SAMPLES_WAIT = 400;
     const uint32_t NUM_SAMPLES_TOTAL = NUM_SAMPLES_WAIT*2;
 
-    // Check sampling rate
-    // uint32_t num_samples = 0;
-    // TickType_t init_time_sec = xTaskGetTickCount();
-    // TickType_t curr_time_sec = xTaskGetTickCount();
-    // TickType_t one_sec = pdMS_TO_TICKS(1000);
+    // circular buffer init
+    Circular_Buffer_Init(IMU_BUFFER);
 
     // impact settings
     const float IMPACT_CHANGE_THRESHOLD = 20.0f;
     const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
-    float prev_accel_magnitude = 0.0f; // FIXME: issue at t=0?
+    float prev_accel_magnitude = 0.0f;
+    bool impact_detected = false;
+    bool first_sample = true;
 
     // demo led init
     const TickType_t LED_on_time = pdMS_TO_TICKS(500);
@@ -52,40 +47,31 @@ void Play_Session_task(void *args) {
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
 
-    // circular buffer init
-    Circular_Buffer_Init(IMU_BUFFER);
-
     // session SPIFFS init
-    const char *file_name = "session_0.txt"; 
-    char file_path[64]; 
+    char file_name[32]; 
+    sprintf(file_name, "session_%u.txt", session_id);
+    char file_path[128]; 
     sprintf(file_path, "/spiffs/%s", file_name);
     char buffer[64];
-    sprintf(buffer, "%s\n", file_name);
+    sprintf(buffer, "%u\n", session_id);
+    ESP_LOGI(PLAY_SESSION_TAG, "SPIFFS file created: %s", file_path);
     SPIFFS_Write(file_path, buffer);
-
+    session_id++;
+    
     while(1){
-        // read IMU over SPI
-        MPU9250_update();
-
-        // Sample per second check
-        /*
-        num_samples++;
-        curr_time_sec = xTaskGetTickCount();
-        if (curr_time_sec > init_time_sec + one_sec) {
-            printf("%ld samples per second\n", num_samples);
-            num_samples = 0;
-            init_time_sec = xTaskGetTickCount();
+        // check for notification to delete - clean exit
+        uint32_t notification;
+        if (xTaskNotifyWait(0, 0, &notification, 0) == pdTRUE) {
+            vTaskDelete(NULL);
         }
-        */
 
-        // populate sample type
+        // populate sample
+        MPU9250_update();
         sample.time = xTaskGetTickCount();
         sample.IMU = mpu;
-
         // write data
         Circular_Buffer_Write(IMU_BUFFER, sample);
 
-        /* check for impact (triple tap button to test)*/
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
             sample.IMU.accel.x * SENSITIVITY,
@@ -95,15 +81,22 @@ void Play_Session_task(void *args) {
         float accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
         float magnitude_change = fabs(accel_magnitude - prev_accel_magnitude);
 
+        if (first_sample) {
+            // ignore first sample
+            first_sample = false;
+        }
         // Check for impact based on change in magnitude (ignore other "impacts" for IMPACT_BUFFER_TIME ms)
-        if ((magnitude_change > IMPACT_CHANGE_THRESHOLD) && (xTaskGetTickCount() - last_impact_time > IMPACT_BUFFER_TIME)) {
+        else if ((magnitude_change > IMPACT_CHANGE_THRESHOLD) && (xTaskGetTickCount() - last_impact_time > IMPACT_BUFFER_TIME)) {
             // Impact detected
             last_impact_time = xTaskGetTickCount();
             impact_detected = true;
             // printf("Imapct at %ld\n", last_impact_time);
         }
 
-        // FIXME: for demo, turn on led for 1/2 sec
+        // Update the previous magnitude for the next iteration
+        prev_accel_magnitude = accel_magnitude;
+
+        // FIXME: for demo, turn on briefly
         if (xTaskGetTickCount() - last_impact_time < LED_on_time) {
             gpio_set_level(LED_PIN, 1);
         }
@@ -111,9 +104,7 @@ void Play_Session_task(void *args) {
             gpio_set_level(LED_PIN, 0);
         }
 
-        // Update the previous magnitude for the next iteration
-        prev_accel_magnitude = accel_magnitude;
-
+        // send impact to processing thread
         if (impact_detected) {
             // start counting samples to the right
             sample_count++;
@@ -131,7 +122,7 @@ void Play_Session_task(void *args) {
 
                 // FIXME: data is lost if no space left
                 if (packet_index == -1) {
-                    printf("Max play session packets being processed.\n");
+                    ESP_LOGE(PLAY_SESSION_TAG, "Max play session packets being processed");
                 }
                 else {
                     // populate data processing buffer
@@ -142,6 +133,7 @@ void Play_Session_task(void *args) {
                     play_session_packets[packet_index].processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
 
                     // spawn data processing thread
+                    // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
                     xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4096, (void*)&play_session_packets[packet_index], 1, NULL, 1);                 
                 }
 
@@ -150,18 +142,15 @@ void Play_Session_task(void *args) {
                 impact_detected = false;
             }
         }
-    }   
+    }  
 }
 
 void Process_Data_task(void *args) {
-
-    active_processing_threads++;
     data_processing_packet_t* packet = (data_processing_packet_t*) args;
 
     while (1) {
 
         // acquire UART sem
-        /*
         if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
             for (uint32_t i = 0; i < packet->num_samples; i++) {
 
@@ -195,7 +184,6 @@ void Process_Data_task(void *args) {
             // Give up the semaphore 
             xSemaphoreGive(UART_sem);
         }
-        */
 
         // simulate work
         vTaskDelay(pdTICKS_TO_MS(100));
@@ -230,41 +218,12 @@ void Process_Data_task(void *args) {
         free(packet->processing_buffer);
         packet->active = false;
 
-        ESP_LOGI(PROCESSING_TAG, "Deleting processing thread | # Active: (%d)", --active_processing_threads);
         vTaskDelete(NULL);
     }
     
 }
 
-/*
-void SPIFFS_Test_task(void *args){
-    // Create variables for SPIFFS
-    const char *file_path = "/spiffs/session_0.txt"; 
-    SPIFFS_Clear(file_path);
-
-    // Instantiate testing struct 
-    SPIFFS_packet_t test_data;
-    test_data.blah = 0;
-    test_data.blah2 = 1; 
-    test_data.blah3 = 2; 
-    
-    while(1){
-        // "Randomize" the struct data 
-        test_data.blah++;
-        test_data.blah2++;
-        test_data.blah3++;
-
-        // Spawn new thread 
-        xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
-        xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&test_data, 1, NULL, 0);
-
-        vTaskDelay(1000);
-    }
-}
-*/
-
 void SPIFFS_Write_task(void *args){
-    // Get the passed in data
     SPIFFS_packet_t *packet = (SPIFFS_packet_t *)args; 
 
     while(1){
@@ -293,6 +252,7 @@ void SPIFFS_Write_task(void *args){
 
 void FSM_task(void *args){
     int8_t button_input;
+    UBaseType_t stack_watermark;
 
     state_t state_handler = {
         .current_state = START,
@@ -304,7 +264,9 @@ void FSM_task(void *args){
     {
         // Recieve button input from queue - block if no presses unless state requires skip
         if (state_handler.skip_button_input || (xQueueReceive(Button_queue, &button_input, portMAX_DELAY) == pdTRUE)) {
-            printf("Button input: %d\n", button_input);
+            stack_watermark = uxTaskGetStackHighWaterMark(NULL);
+            ESP_LOGI("FSM_TASK", "Free stack: %u bytes", stack_watermark * sizeof(StackType_t));
+            ESP_LOGI("FSM_TASK", "Button input: %d", button_input);
 
             // state transitions
             switch (state_handler.current_state) {
@@ -347,12 +309,29 @@ void FSM_task(void *args){
                             state_handler.skip_button_input = true;
                             break;
                         case SINGLE_PRESS:
-                            vTaskDelete(state_handler.task_handles.Play_Session_Handle);
-                            state_handler.task_handles.Play_Session_Handle = NULL;
-                            state_handler.play_session_active = false;
-                            state_handler.next_state = START;
 
-                            ESP_LOGI(FSM_TAG,"Play session ended");
+                            if (state_handler.Play_Session_Handle != NULL) {
+
+                                xTaskNotify(state_handler.Play_Session_Handle, 0, eNoAction);
+                                vTaskDelay(pdMS_TO_TICKS(100)); // Allow time for play session to terminate itself
+
+                                // ensure play session has been deleted
+                                eTaskState task_state = eTaskGetState(state_handler.Play_Session_Handle);
+                                if (task_state == eDeleted) {
+                                    ESP_LOGI(FSM_TAG, "Play_Session_task deleted successfully");
+
+                                    state_handler.Play_Session_Handle = NULL;
+                                    state_handler.play_session_active = false;
+                                    state_handler.next_state = START;
+
+                                } else {
+                                    ESP_LOGE(FSM_TAG, "Play_Session_task still running (state: %d)", task_state);
+                                }
+
+                            }
+                            else {
+                                ESP_LOGE(FSM_TAG,"Failed to end play session");
+                            }
                             break;
                         default:
                             state_handler.next_state = state_handler.current_state;
@@ -404,9 +383,11 @@ void FSM_task(void *args){
                     // spawn play session - only one active at a time
                     if (!state_handler.play_session_active) {
 
-                        if (state_handler.task_handles.Play_Session_Handle == NULL) {
-                            xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, &state_handler.task_handles, 1, &state_handler.task_handles.Play_Session_Handle, 0);
+                        if (state_handler.Play_Session_Handle == NULL) {
+                            // create session task
                             state_handler.play_session_active = true;
+                            xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, &state_handler.Play_Session_Handle, 0);
+
                             ESP_LOGI(FSM_TAG,"Play session started");
                         }
                         else {

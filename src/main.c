@@ -40,7 +40,7 @@ void app_main(void) {
     // Spawn threads
     // xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
-    xTaskCreatePinnedToCore(FSM_task, "FSM_task", 2048, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(FSM_task, "FSM_task", 4096, NULL, 1, NULL, 1);
     // xTaskCreatePinnedToCore(SPIFFS_Test_task, "SPIFFS_Test_task", 4096, NULL, 1, NULL, 0);
 
     // Plot threads

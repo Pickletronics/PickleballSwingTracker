@@ -17,12 +17,13 @@
 
 /*************************************Defines***************************************/
 
-#define MAX_PROCESSING_THREADS      3
-#define MAX_SPIFFS_THREADS          2*MAX_PROCESSING_THREADS
-
 #define FSM_TAG "FSM"
 #define PROCESSING_TAG "PROCESSING"
 #define SPIFFS_WRITE_TAG "SPIFFS_WRITE"
+#define PLAY_SESSION_TAG "PLAY_SESSION"
+
+#define MAX_PROCESSING_THREADS      3
+#define MAX_SPIFFS_THREADS          2*MAX_PROCESSING_THREADS
 
 /*************************************Defines***************************************/
 
@@ -78,19 +79,13 @@ enum STATE {
     NUM_STATES
 };
 
-typedef struct TaskHandle_Packet_t {
-    TaskHandle_t Play_Session_Handle;
-    TaskHandle_t Data_Processing_Handles[MAX_PROCESSING_THREADS];
-    TaskHandle_t SPIFFS_Write_Handles[MAX_SPIFFS_THREADS];
-} TaskHandle_Packet_t;
-
 typedef struct state_t {
     enum STATE current_state;
     enum STATE next_state;
     bool skip_button_input;
     bool play_session_active;
     bool BLE_session_active;
-    TaskHandle_Packet_t task_handles;
+    TaskHandle_t Play_Session_Handle;;
 } state_t;
 
 /****************************Data Structure Definitions*****************************/
@@ -98,11 +93,10 @@ typedef struct state_t {
 /********************************Public Functions***********************************/
 
 void Play_Session_task(void *args); 
-void Button_task(void *args);
 void Process_Data_task(void *args); 
-void FSM_task(void *args);
-void SPIFFS_Test_task(void *args);
 void SPIFFS_Write_task(void *args);
+void FSM_task(void *args);
+void Button_task(void *args);
 
 /********************************Public Functions***********************************/
 

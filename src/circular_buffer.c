@@ -19,6 +19,12 @@ bool Circular_Buffer_Init(uint32_t buffer_index) {
         printf("Invalid buffer index\n");
         return false;
     } else {
+        // clear buffer
+        IMU_sample_t clear_sample = {0};
+        for (uint32_t i = 0; i < BUFFER_SIZE; i++) {
+            buffers[buffer_index].buffer[i] = clear_sample;
+        }
+
         buffers[buffer_index].index = &(buffers[buffer_index].buffer[0]);
         return true;
     }
@@ -49,7 +55,7 @@ void Circular_Buffer_Peek(uint32_t buffer_index, IMU_sample_t* data) {
     IMU_sample_t* peek_ptr = buffers[buffer_index].index;
 
     // move peek pointer to previous index
-    Circular_Buffer_Decrement_Temp_Index(buffer_index, peek_ptr);
+    Circular_Buffer_Decrement_Temp_Index(buffer_index, &peek_ptr);
 
     // populate data pointer with data found at peek pointer
     *data = *peek_ptr;
@@ -84,6 +90,14 @@ IMU_sample_t* Circular_Buffer_Sized_DDump(uint32_t buffer_index, uint32_t num_sa
     }
 
     return dump_buffer;
+}
+
+void Circular_Buffer_Print(uint32_t buffer_index) {
+    for (uint32_t i = 0; i < BUFFER_SIZE; i++) {
+        // dump buffer to terminal for viewing - make sure it is reset
+        printf("%d", buffers[buffer_index].buffer[i].IMU.accel.x);
+    }
+    printf("\n");
 }
 
 /********************************Public Functions***********************************/
