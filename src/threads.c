@@ -8,13 +8,19 @@
 
 /********************************Public Variables***********************************/
 
-bool Dump_data = false;
 volatile bool hold_detected = false;
 volatile int8_t num_presses = 0;
+uint8_t num_sessions = 0; 
 
-uint8_t session_id = 0;
+// for testing purposes
+bool impact_detected = false;
+
 data_processing_packet_t play_session_packets[MAX_PROCESSING_THREADS];
 SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_THREADS];
+SPIFFS_files_t SPIFFS_files = {
+    .num_files = 0,
+    .file_path = {NULL}
+};
 
 /********************************Public Variables***********************************/
 
@@ -48,15 +54,29 @@ void Play_Session_task(void *args) {
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
 
     // session SPIFFS init
-    char file_name[32]; 
-    sprintf(file_name, "session_%u.txt", session_id);
+    char file_name[32];     
+    sprintf(file_name, "session_%u.txt", SPIFFS_files.num_files);
     char file_path[128]; 
     sprintf(file_path, "/spiffs/%s", file_name);
-    char buffer[64];
-    sprintf(buffer, "%u\n", session_id);
-    ESP_LOGI(PLAY_SESSION_TAG, "SPIFFS file created: %s", file_path);
-    SPIFFS_Write(file_path, buffer);
-    session_id++;
+
+    if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS-1){
+        // Add new session to SPIFFS_files
+        SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+
+        // Add the header to the file // TODO: Add meaningful header
+        char buffer[64];
+        sprintf(buffer, "%u\n", SPIFFS_files.num_files);
+        ESP_LOGI(PLAY_SESSION_TAG, "SPIFFS file created: %s", file_path);
+        SPIFFS_Write(file_path, buffer);
+        SPIFFS_files.num_files++;
+    }
+    else{
+        ESP_LOGE(PLAY_SESSION_TAG, "MAX SESSIONS REACHED");
+
+        // do nothing
+        while (1);
+        
+    }
     
     while(1){
         // check for notification to delete - clean exit
@@ -233,9 +253,11 @@ void SPIFFS_Write_task(void *args){
             char buffer[64];
             sprintf(buffer, "%d,%d,%d\n", packet->test_1, packet->test_2, packet->test_3);
 
-            // // Write the data 
+            // Write the data 
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-            // SPIFFS_Print(packet->SPIFFS_file_path); // For testing
+            // Can add for easier testing (to make bytes > 247)
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+            // SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
             // Give up the semaphore 
             packet->active = false;
