@@ -59,9 +59,9 @@ void Play_Session_task(void *args) {
     char file_path[128]; 
     sprintf(file_path, "/spiffs/%s", file_name);
 
-    if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS-1){
+    if(SPIFFS_files.num_files < MAX_PLAY_SESSIONS){
         // Add new session to SPIFFS_files
-        SPIFFS_files.file_path[SPIFFS_files.num_files] = file_path;
+        SPIFFS_files.file_path[SPIFFS_files.num_files] = strdup(file_path);
 
         // Add the header to the file // TODO: Add meaningful header
         char buffer[64];
@@ -74,7 +74,13 @@ void Play_Session_task(void *args) {
         ESP_LOGE(PLAY_SESSION_TAG, "MAX SESSIONS REACHED");
 
         // do nothing
-        while (1);
+        while (1){
+            // check for notification to delete
+            uint32_t notification;
+            if (xTaskNotifyWait(0, 0, &notification, 0) == pdTRUE) {
+                vTaskDelete(NULL);
+            }
+        }
         
     }
     
@@ -171,39 +177,39 @@ void Process_Data_task(void *args) {
     while (1) {
 
         // acquire UART sem
-        if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
-            for (uint32_t i = 0; i < packet->num_samples; i++) {
+        // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
+        //     for (uint32_t i = 0; i < packet->num_samples; i++) {
 
-                // Convert raw accelerometer values to m/s^2
-                vector3D_t accel_real = {
-                    packet->processing_buffer[i].IMU.accel.x * SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.y * SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.z * SENSITIVITY
-                };
+        //         // Convert raw accelerometer values to m/s^2
+        //         vector3D_t accel_real = {
+        //             packet->processing_buffer[i].IMU.accel.x * SENSITIVITY,
+        //             packet->processing_buffer[i].IMU.accel.y * SENSITIVITY,
+        //             packet->processing_buffer[i].IMU.accel.z * SENSITIVITY
+        //         };
 
-                union {
-                    float accel_magnitude;
-                    uint32_t accel_magnitude_u32;
-                } float_union;
+        //         union {
+        //             float accel_magnitude;
+        //             uint32_t accel_magnitude_u32;
+        //         } float_union;
 
-                float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+        //         float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
 
-                // output data over uart
-                char byte_data[4] = {
-                    (float_union.accel_magnitude_u32 >> 0) & 0xFF,
-                    (float_union.accel_magnitude_u32 >> 8) & 0xFF,
-                    (float_union.accel_magnitude_u32 >> 16) & 0xFF,
-                    (float_union.accel_magnitude_u32 >> 24) & 0xFF
-                };
+        //         // output data over uart
+        //         char byte_data[4] = {
+        //             (float_union.accel_magnitude_u32 >> 0) & 0xFF,
+        //             (float_union.accel_magnitude_u32 >> 8) & 0xFF,
+        //             (float_union.accel_magnitude_u32 >> 16) & 0xFF,
+        //             (float_union.accel_magnitude_u32 >> 24) & 0xFF
+        //         };
 
-                UART_write(byte_data, 4);
+        //         UART_write(byte_data, 4);
 
-                // printf("%f\n", float_union.accel_magnitude);
-            }
+        //         // printf("%f\n", float_union.accel_magnitude);
+        //     }
 
-            // Give up the semaphore 
-            xSemaphoreGive(UART_sem);
-        }
+        //     // Give up the semaphore 
+        //     xSemaphoreGive(UART_sem);
+        // }
 
         // simulate work
         vTaskDelay(pdTICKS_TO_MS(100));
@@ -372,7 +378,9 @@ void FSM_task(void *args){
                             state_handler.skip_button_input = true;
                             break;
                         case DOUBLE_PRESS:
-                            printf("Ending BLE session\n");
+                            ESP_LOGI(FSM_TAG,"Ending BLE session");
+                            BLE_End(); 
+                            state_handler.BLE_session_active = false; 
                             state_handler.next_state = START;
                             break;
                         default:
@@ -423,6 +431,10 @@ void FSM_task(void *args){
 
                 case BLE_SESSION:
                     printf("BLE SESSION\n");
+                    if(!state_handler.BLE_session_active){
+                        state_handler.BLE_session_active = true; 
+                        BLE_Start(); 
+                    }
                     break;
 
                 default:

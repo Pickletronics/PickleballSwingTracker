@@ -9,7 +9,7 @@
 
 /********************************Public Variables***********************************/
 
-char *BLE_TAG = "BLE-Server";
+char *BLE_NAME = "BLE-Server";
 uint8_t ble_addr_type;
 uint8_t curr_session = 0;
 
@@ -28,20 +28,12 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 /********************************Public Functions***********************************/
 
 void BLE_Start(){
-    // // Initialize NVS 
-    // esp_err_t ret = nvs_flash_init();
-    // if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    //     ESP_ERROR_CHECK(nvs_flash_erase());
-    //     ret = nvs_flash_init();
-    // }
-    // ESP_ERROR_CHECK(ret);
-
     // Initialize necessary modules 
     nvs_flash_init();                          // 1 - Initialize NVS flash using
     nimble_port_init();                        // 3 - Initialize the host stack
     
     // Set up GAP and GATT services 
-    ble_svc_gap_device_name_set(BLE_TAG);          // 4 - Initialize NimBLE configuration - server name
+    ble_svc_gap_device_name_set(BLE_NAME);          // 4 - Initialize NimBLE configuration - server name
     ble_svc_gap_init();                        // 4 - Initialize NimBLE configuration - gap service
     ble_svc_gatt_init();                       // 4 - Initialize NimBLE configuration - gatt service
     ble_gatts_count_cfg(gatt_svcs);            // 4 - Initialize NimBLE configuration - config gatt services
@@ -74,6 +66,7 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
         }
         // Otherwise send empty file message and move to next session if applicable.
         else{
+            free(SPIFFS_files.file_path[curr_session]);
             curr_session++; 
             os_mbuf_append(ctxt->om, "End of file reached.", sizeof("End of file reached."));
         }
@@ -110,26 +103,25 @@ void BLE_Advertise(){
 
 int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
     switch(event->type){
-    // If connected, advertise 
+    // Advertise to find a connection
     case BLE_GAP_EVENT_CONNECT: 
         if(event->connect.status != 0){
             BLE_Advertise(); 
-            // printf("Connection failed."); 
             break; 
         }
-        printf("Connected Successfully!\n"); 
+        ESP_LOGI(BLE_TAG, "Connected Successfully!"); 
         break; 
 
     case BLE_GAP_EVENT_DISCONNECT: 
-        printf("Connection terminated. Ending bluetooth session.\n"); 
-        nimble_port_stop(); 
+        ESP_LOGI(BLE_TAG, "Connection terminated. Advertising again.");
+        BLE_Advertise(); 
         break;
 
-    // Advertise again after completion 
-    // case BLE_GAP_EVENT_ADV_COMPLETE: 
-    //     printf("Advertising event complete. Advertising again."); 
-    //     BLE_Advertise(); 
-    //     break; 
+    // Advertise again after completion (timeout)
+    case BLE_GAP_EVENT_ADV_COMPLETE: 
+        ESP_LOGI(BLE_TAG, "Advertising event timed out. Advertising again.");
+        BLE_Advertise(); 
+        break; 
 
     default: 
         break; 
@@ -146,4 +138,16 @@ void BLE_Launch(void *param){
     nimble_port_run(); 
 }
 
+void BLE_End(){
+    // Stop advertising if it's running
+    if (ble_gap_adv_active()) {
+        ble_gap_adv_stop();
+    }
+    ESP_LOGI(BLE_TAG, "advertising stopped.");
+
+    // Shutdown the NimBLE host
+    nimble_port_deinit();
+
+    ESP_LOGI(BLE_TAG, "Bluetooth session terminated.");
+}
 /********************************Public Functions***********************************/
