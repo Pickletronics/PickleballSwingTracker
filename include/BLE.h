@@ -24,6 +24,8 @@
 #define BLE_PAYLOAD_SIZE    247 
 #define BLE_MTU             256
 
+#define BLE_TAG "BLE"
+
 /*************************************Defines***************************************/
 
 /***********************************Externs*****************************************/
@@ -37,6 +39,7 @@ void BLE_Advertise(void);
 int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg);
 void BLE_Sync(void);
 void BLE_Launch(void *param);
+void BLE_End(void);
  
 /********************************Public Functions***********************************/
 

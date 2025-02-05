@@ -66,7 +66,6 @@ void SPIFFS_init() {
 }
 
 void SPIFFS_Print(const char *path){
-    // ESP_LOGI(SPIFFS_TAG, "Reading file");
     FILE* f = fopen(path, "r");
     if (f == NULL) {
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for reading");
@@ -78,7 +77,6 @@ void SPIFFS_Print(const char *path){
     fclose(f);
 
     ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer);
-    // ESP_LOGI(SPIFFS_TAG, "Read %d bytes from file", bytesRead);
 }
 
 size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
@@ -94,13 +92,14 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     size_t bytesRead; 
     // Read size amount of bytes in buffer
     if((bytesRead = fread(buffer, 1, read_size, f)) > 0){
-        // printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer);
         dump_position = ftell(f); 
     }
+    // Reset dump position for next session file.
     else {
-        dump_position = 0; // Reset dump position for next session file.
+        dump_position = 0; 
     }
     fclose(f);
+    ESP_LOGI(SPIFFS_TAG, "Read %d bytes from %s.", bytesRead, path);
     return bytesRead; 
 }
 
@@ -119,12 +118,11 @@ void SPIFFS_Write(const char *path, const char *data){
     }
     fflush(f);
     fclose(f);
-    ESP_LOGI(SPIFFS_TAG, "File written successfully.");
+    ESP_LOGI(SPIFFS_TAG, "Wrote to %s successfully.", path);
 }
 
 void SPIFFS_Clear(const char *path){
     // Reopen the file in write mode to clear 
-    ESP_LOGI(SPIFFS_TAG, "Clearing file");
     FILE* f = fopen(path, "w");
     if (f == NULL) {
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for clearing");

@@ -27,7 +27,6 @@ void app_main(void) {
     SPI_Init(); 
     UART_init();
     MPU9250_Init();
-    BLE_Start(); 
     SPIFFS_init(); 
     Button_Init();
 
