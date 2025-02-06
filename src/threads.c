@@ -378,8 +378,17 @@ void FSM_task(void *args){
                             state_handler.skip_button_input = true;
                             break;
                         case DOUBLE_PRESS:
-                            ESP_LOGI(FSM_TAG,"Ending BLE session");
+                            // End the BLE session
                             BLE_End(); 
+                            ESP_LOGI(FSM_TAG,"Ending BLE session");
+
+                            // Reset SPIFFS file tracking
+                            for(int i = 0; i < SPIFFS_files.num_files; i++){
+                                SPIFFS_files.file_path[i] = NULL; 
+                            }
+                            SPIFFS_files.num_files = 0; 
+                            
+                            // Reset state handler variables
                             state_handler.BLE_session_active = false; 
                             state_handler.next_state = START;
                             break;
