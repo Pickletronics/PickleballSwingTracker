@@ -9,9 +9,11 @@
 #include "SPI.h"
 #include "MPU9250.h"
 #include "button.h"
+#include "LED.h"
 #include "BLE.h"
 #include "SPIFFS.h"
 #include "circular_buffer.h"
+#include "esp_log.h"
 
 /************************************Includes***************************************/
 
