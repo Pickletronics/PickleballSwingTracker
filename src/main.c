@@ -24,8 +24,9 @@ QueueHandle_t Button_queue;
 /// ESP-IDF starts FreeRTOS automatically when function returns
 void app_main(void) {
     // Initialize modules
-    SPI_Init(); 
     UART_init();
+    LED_init();
+    SPI_Init(); 
     MPU9250_Init();
     SPIFFS_init(); 
     Button_Init();

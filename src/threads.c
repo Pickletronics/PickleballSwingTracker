@@ -288,6 +288,8 @@ void FSM_task(void *args){
         .skip_button_input = false,
     };
 
+    LED_notify(IDLE);
+
     while (1)
     {
         // Recieve button input from queue - block if no presses unless state requires skip
@@ -352,6 +354,8 @@ void FSM_task(void *args){
                                     state_handler.play_session_active = false;
                                     state_handler.next_state = START;
 
+                                    LED_notify(IDLE);
+
                                 } else {
                                     ESP_LOGE(FSM_TAG, "Play_Session_task still running (state: %d)", task_state);
                                 }
@@ -361,6 +365,8 @@ void FSM_task(void *args){
                                 state_handler.Play_Session_Handle = NULL;
                                 state_handler.play_session_active = false;
                                 state_handler.next_state = START;
+
+                                LED_notify(IDLE);
                             }
                             break;
                         default:
@@ -381,6 +387,8 @@ void FSM_task(void *args){
                             // End the BLE session
                             BLE_End(); 
                             ESP_LOGI(FSM_TAG,"Ending BLE session");
+                            BLE_End(); 
+                            LED_notify(IDLE);
 
                             // Reset SPIFFS file tracking
                             for(int i = 0; i < SPIFFS_files.num_files; i++){
@@ -428,7 +436,7 @@ void FSM_task(void *args){
                             // create session task
                             state_handler.play_session_active = true;
                             xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, &state_handler.Play_Session_Handle, 0);
-
+                            LED_notify(BATTERY_LEVEL);
                             ESP_LOGI(FSM_TAG,"Play session started");
                         }
                         else {
@@ -443,6 +451,7 @@ void FSM_task(void *args){
                     if(!state_handler.BLE_session_active){
                         state_handler.BLE_session_active = true; 
                         BLE_Start(); 
+                        LED_notify(BLE_PAIRING);
                     }
                     break;
 

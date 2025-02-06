@@ -54,6 +54,7 @@ void BLE_Start(){
 // Need these parameters to be compliant with the NimBLE API. 
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg){
     // Make sure there is a valid session to read
+    LED_notify(BLE_TRANSFER);
     if(curr_session < SPIFFS_files.num_files){
         // Create buffer to store SPIFFS data
         char *buffer = malloc(BLE_PAYLOAD_SIZE);
@@ -75,6 +76,7 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
     // Else you have read all sessions.
     else {
         os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
+        LED_notify(BLE_PAIRED);
     }
    
     return 0; 
@@ -109,6 +111,7 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
             BLE_Advertise(); 
             break; 
         }
+        LED_notify(BLE_PAIRED);
         ESP_LOGI(BLE_TAG, "Connected Successfully!"); 
         break; 
 
