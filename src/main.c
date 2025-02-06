@@ -24,9 +24,9 @@ QueueHandle_t Button_queue;
 /// ESP-IDF starts FreeRTOS automatically when function returns
 void app_main(void) {
     // Initialize modules
+    UART_init();
     LED_init();
     SPI_Init(); 
-    UART_init();
     MPU9250_Init();
     SPIFFS_init(); 
     Button_Init();
@@ -38,9 +38,9 @@ void app_main(void) {
     SPIFFS_sem = xSemaphoreCreateMutex();
 
     // Spawn threads
-    xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
+    // xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
-    // xTaskCreatePinnedToCore(FSM_task, "FSM_task", 4096, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(FSM_task, "FSM_task", 4096, NULL, 1, NULL, 1);
     // xTaskCreatePinnedToCore(SPIFFS_Test_task, "SPIFFS_Test_task", 4096, NULL, 1, NULL, 0);
 
     // Plot threads

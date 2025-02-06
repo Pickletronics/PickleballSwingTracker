@@ -43,6 +43,8 @@ extern QueueHandle_t Button_queue;
 // FIXME: Would rather include function's header file
 extern int esp_clk_cpu_freq();
 
+extern TaskHandle_t LED_Handle;
+
 /***********************************Externs*****************************************/
 
 /****************************Data Structure Definitions*****************************/
@@ -90,7 +92,7 @@ typedef struct state_t {
     bool skip_button_input;
     bool play_session_active;
     bool BLE_session_active;
-    TaskHandle_t Play_Session_Handle;;
+    TaskHandle_t Play_Session_Handle;
 } state_t;
 
 typedef struct SPIFFS_files_t {
