@@ -7,7 +7,7 @@
 
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
-#include "threads.h"
+#include "play_session.h"
 #include <stdint.h>
 
 /************************************Includes***************************************/
@@ -25,7 +25,9 @@
 void Button_Init();
 int Button_Read();
 void Button_Timer_Init();
+void Button_task(void *args);
 bool Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata, void* user_data);
+void Button_ISR();
 
 /********************************Public Functions***********************************/
 

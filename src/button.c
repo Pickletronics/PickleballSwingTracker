@@ -3,7 +3,6 @@
 /************************************Includes***************************************/
 
 #include "button.h"
-#include "threads.h"
 
 /************************************Includes***************************************/
 
@@ -81,6 +80,44 @@ void Button_Timer_Init(){
     gptimer_set_alarm_action(Button_timer, &alarm_config);
 }
 
+void Button_task(void *args) {
+    TickType_t curr_time, press_time;
+    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    const TickType_t hold_threshold = pdMS_TO_TICKS(400);
+
+    while (1) {
+        if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
+            
+            // Debounce button press
+            vTaskDelay(debounce_time);
+            press_time = xTaskGetTickCount();
+            curr_time = press_time;
+            // Pause timer if timer running
+            if (num_presses != 0) { gptimer_stop(Button_timer); }
+
+            // Poll for hold
+            while (!Button_Read())
+            {
+                // Update current timer
+                curr_time = xTaskGetTickCount();
+                // Check if press is longer than the hold threshold
+                if (curr_time - press_time > hold_threshold) {
+                    hold_detected = true;
+                    break;
+                }
+            }
+
+            // Increment press counter if pressed
+            num_presses++;
+            // Restart the timer if running
+            if (num_presses == 0){ gptimer_enable(Button_timer); }
+            gptimer_set_raw_count(Button_timer, 0);
+            gptimer_start(Button_timer);
+            gpio_intr_enable(BUTTON_PIN);
+        }
+    }
+}
+
 /********************************Public Functions***********************************/
 
 /***************************Interrupt Service Routines******************************/
@@ -103,5 +140,16 @@ bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm
     return (high_task_awoken == pdTRUE);
     // return true;
 }
+
+void Button_ISR() {
+    if (!hold_detected)
+    {
+        // Disable the GPIO interrupt for the button
+        gpio_intr_disable(BUTTON_PIN);
+        // Give the semaphore to notify button task
+        xSemaphoreGiveFromISR(Button_sem, NULL);
+    }
+}
+
 
 /***************************Interrupt Service Routines******************************/

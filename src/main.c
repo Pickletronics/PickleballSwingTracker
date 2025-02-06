@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "threads.h"
+#include "play_session.h"
+#include "FSM.h"
 
 /************************************Includes***************************************/
 

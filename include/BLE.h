@@ -14,6 +14,7 @@
 #include "host/ble_hs.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
+#include "play_session.h"
 
 /************************************Includes***************************************/
 
@@ -39,7 +40,7 @@ void BLE_Advertise(void);
 int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg);
 void BLE_Sync(void);
 void BLE_Launch(void *param);
-void BLE_End(void);
+bool BLE_End(void);
  
 /********************************Public Functions***********************************/
 
