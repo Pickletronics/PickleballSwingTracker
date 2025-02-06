@@ -26,6 +26,7 @@ void SPIFFS_Print(const char *path);
 size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size);
 void SPIFFS_Write(const char *path, const char *data);
 void SPIFFS_Clear(const char *path);
+void SPIFFS_Delete(const char *path);
 
 /********************************Public Functions***********************************/
 

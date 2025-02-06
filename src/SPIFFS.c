@@ -93,12 +93,13 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     // Read size amount of bytes in buffer
     if((bytesRead = fread(buffer, 1, read_size, f)) > 0){
         dump_position = ftell(f); 
+        fclose(f);
     }
     // Reset dump position for next session file.
     else {
         dump_position = 0; 
+        SPIFFS_Delete(path);
     }
-    fclose(f);
     ESP_LOGI(SPIFFS_TAG, "Read %d bytes from %s.", bytesRead, path);
     return bytesRead; 
 }
@@ -133,5 +134,12 @@ void SPIFFS_Clear(const char *path){
     ESP_LOGI(SPIFFS_TAG, "File cleared successfully.");
 }
 
+void SPIFFS_Delete(const char *path){
+    if (remove(path) == 0) {
+        ESP_LOGI(SPIFFS_TAG, "File %s deleted successfully", path);
+    } else {
+        ESP_LOGE(SPIFFS_TAG, "Failed to delete file %s", path);
+    }
+}
 /********************************Public Functions***********************************/
 

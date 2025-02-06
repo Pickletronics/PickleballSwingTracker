@@ -115,6 +115,7 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
         ESP_LOGI(BLE_TAG, "Connected Successfully!"); 
         break; 
 
+    // Advertise again if client disconnects. 
     case BLE_GAP_EVENT_DISCONNECT: 
         ESP_LOGI(BLE_TAG, "Connection terminated. Advertising again.");
         BLE_Advertise(); 
@@ -150,6 +151,9 @@ void BLE_End(){
 
     // Shutdown the NimBLE host
     nimble_port_deinit();
+
+    // Reset the current session tracker
+    curr_session = 0; 
 
     ESP_LOGI(BLE_TAG, "Bluetooth session terminated.");
 }
