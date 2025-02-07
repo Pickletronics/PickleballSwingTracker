@@ -3,18 +3,53 @@
 /************************************Includes***************************************/
 
 #include "button.h"
-#include "threads.h"
 
 /************************************Includes***************************************/
 
 /********************************Public Variables***********************************/
 
+SemaphoreHandle_t Button_sem;
+QueueHandle_t Button_queue;
+
 gptimer_handle_t Button_timer;
+int8_t num_presses = 0;
 volatile bool timer_trig = false;
-extern uint8_t num_presses;
-extern bool hold_detected;
+volatile bool hold_detected = false;
 
 /********************************Public Variables***********************************/
+
+/********************************Static Functions**********************************/
+
+static int Button_Read() {
+    return gpio_get_level(BUTTON_PIN);
+}
+
+static void Button_Timer_Init(){
+    // Initialize button queue
+    Button_queue = xQueueCreate(4, sizeof(int8_t));
+
+    // Configure the Timer/Counter for button press detection timing
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_RES, 
+    };
+    gptimer_new_timer(&timer_config, &Button_timer);
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = Button_Timer_Callback,
+    };
+    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
+
+    gptimer_enable(Button_timer);
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = ALARM_COUNT,
+    };
+    gptimer_set_alarm_action(Button_timer, &alarm_config);
+}
+
+/********************************Static Functions**********************************/
 
 /********************************Public Functions***********************************/
 
@@ -50,35 +85,49 @@ void Button_Init() {
 
     // Initialize the Timer/Counter for the Button
     Button_Timer_Init();
+
+    Button_sem = xSemaphoreCreateBinary();
+
+    // start button task
+    xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
 }
 
-int Button_Read() {
-    return gpio_get_level(BUTTON_PIN);
-}
+void Button_task(void *args) {
+    TickType_t curr_time, press_time;
+    const TickType_t debounce_time = pdMS_TO_TICKS(30);
+    const TickType_t hold_threshold = pdMS_TO_TICKS(2000);
 
-void Button_Timer_Init(){
-    // Initialize button queue
-    Button_queue = xQueueCreate(4, sizeof(int8_t));
+    while (1) {
+        if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
+            
+            // Debounce button press
+            vTaskDelay(debounce_time);
+            press_time = xTaskGetTickCount();
+            curr_time = press_time;
+            // Pause timer if timer running
+            if (num_presses != 0) { gptimer_stop(Button_timer); }
 
-    // Configure the Timer/Counter for button press detection timing
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = TIMER_RES, 
-    };
-    gptimer_new_timer(&timer_config, &Button_timer);
+            // Poll for hold
+            while (!Button_Read())
+            {
+                // Update current timer
+                curr_time = xTaskGetTickCount();
+                // Check if press is longer than the hold threshold
+                if (curr_time - press_time > hold_threshold) {
+                    hold_detected = true;
+                    break;
+                }
+            }
 
-    gptimer_event_callbacks_t cbs = {
-        .on_alarm = Button_Timer_Callback,
-    };
-    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
-
-    gptimer_enable(Button_timer);
-
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = ALARM_COUNT,
-    };
-    gptimer_set_alarm_action(Button_timer, &alarm_config);
+            // Increment press counter if pressed
+            num_presses++;
+            // Restart the timer if running
+            if (num_presses == 0){ gptimer_enable(Button_timer); }
+            gptimer_set_raw_count(Button_timer, 0);
+            gptimer_start(Button_timer);
+            gpio_intr_enable(BUTTON_PIN);
+        }
+    }
 }
 
 /********************************Public Functions***********************************/
@@ -103,5 +152,16 @@ bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm
     return (high_task_awoken == pdTRUE);
     // return true;
 }
+
+void Button_ISR() {
+    if (!hold_detected)
+    {
+        // Disable the GPIO interrupt for the button
+        gpio_intr_disable(BUTTON_PIN);
+        // Give the semaphore to notify button task
+        xSemaphoreGiveFromISR(Button_sem, NULL);
+    }
+}
+
 
 /***************************Interrupt Service Routines******************************/

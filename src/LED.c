@@ -28,15 +28,17 @@ static void set_RGB(uint8_t R, uint8_t G, uint8_t B) {
 }
 
 static void set_battery_led_status(uint8_t percentage) {
-    if (percentage > 50) {
-        // Green for good battery (>50%)
-        set_RGB(0,255,0);
-    } else if (percentage > 20) {
-        // Yellow for medium battery (20-50%)
-        set_RGB(255,255,0);
-    } else {
+    if (percentage > 20) {
+        // Green for good battery (>20%)
+        set_RGB(0,MAX,0);
+    } 
+    // else if (percentage > 20) {
+    //     // Yellow for medium battery (20-50%)
+    //     set_RGB(255,255,0);
+    // } 
+    else {
         // Red for low battery (<20%)
-        set_RGB(255,0,0);
+        set_RGB(MAX,0,0);
     }
 }
 
@@ -142,56 +144,70 @@ void LED_init(void) {
 }
 
 void LED_task(void *pvParameters) {
-    const uint32_t SLOW_BLINK = 250;
-    const uint32_t FAST_BLINK = 60;
     enum LED_STATE led_state = START_UP;
+
+    // battery status vars
+    uint32_t adc_voltage;
+    uint8_t percentage;
     
     while (1) {
         uint32_t notification;
         if (xTaskNotifyWait(0, 0, &notification, 0) == pdTRUE) {
             led_state = (enum LED_STATE) notification;
-            printf("Notification: %ld\n", notification);
+            ESP_LOGI(LED_TAG, "Notification: %ld\n", notification);
         }
 
         switch (led_state) {
             case START_UP:
-                set_RGB(255,255,255);
+                // blink white
+                set_RGB(MED,MED,MED);
                 vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
-                set_RGB(0,0,0);
+                set_RGB(DIM,DIM,DIM);
                 vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
                 break;
 
             case IDLE:
-                set_RGB(255,255,255);
+                set_RGB(MED,MED,MED);
                 break;
 
             case BLE_PAIRING:
-                set_RGB(0,0,255);
+                // blink blue
+                set_RGB(0,0,MED);
                 vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
-                set_RGB(0,0,0);
+                set_RGB(0,0,DIM);
                 vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
                 break;
 
             case BLE_PAIRED:
-                set_RGB(0,0,255);
+                // solid blue
+                set_RGB(0,0,MED);
                 break;
 
             case BLE_TRANSFER:
-                set_RGB(0,0,255);
+                // rapid blink on/off blue
+                set_RGB(0,0,MED);
                 vTaskDelay(pdMS_TO_TICKS(FAST_BLINK));
                 set_RGB(0,0,0);
                 vTaskDelay(pdMS_TO_TICKS(FAST_BLINK));
                 break;
 
             case BATTERY_LEVEL:
-                uint32_t adc_voltage = read_battery_voltage();
-                uint32_t batt_voltage = adc_voltage * 2;
-                uint8_t percentage = calculate_battery_percentage(adc_voltage);
+                // solid green/yellow/red
+                adc_voltage = read_battery_voltage();
+                percentage = calculate_battery_percentage(adc_voltage);
                 
-                ESP_LOGI(LED_TAG, "ADC: %lumV (Battery: %lumV) (%u%%)\r\n", adc_voltage, batt_voltage, percentage);
+                // ESP_LOGI(LED_TAG, "ADC: %lumV (Battery: %lumV) (%u%%)\r\n", adc_voltage, adc_voltage * 2, percentage);
                 vTaskDelay(pdMS_TO_TICKS(500));
 
                 set_battery_led_status(percentage);
+                break;
+
+            case SPIFFS_FULL:
+                // blink on/off yellow
+                set_RGB(MED,MED,0);
+                vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
+                set_RGB(0,0,0);
+                vTaskDelay(pdMS_TO_TICKS(SLOW_BLINK));
                 break;
             
             default:
@@ -204,7 +220,7 @@ void LED_task(void *pvParameters) {
 
 void LED_notify(uint32_t notification) {
     xTaskNotify(LED_Handle, notification, eSetValueWithOverwrite);
-    printf("Notification sent: %ld\n", notification);
+    ESP_LOGI(LED_TAG, "Notification sent: %ld\n", notification);
 }
 
 /********************************Public Functions***********************************/

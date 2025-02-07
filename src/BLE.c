@@ -3,7 +3,6 @@
 /************************************Includes***************************************/
 
 #include "BLE.h"
-#include "threads.h"
 
 /************************************Includes***************************************/
 
@@ -12,6 +11,7 @@
 char *BLE_NAME = "BLE-Server";
 uint8_t ble_addr_type;
 uint8_t curr_session = 0;
+bool dumped = 0; 
 
 static const struct ble_gatt_svc_def gatt_svcs[] = {
     {.type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -47,6 +47,9 @@ void BLE_Start(){
 
     // Run the thread with RTOS 
     nimble_port_freertos_init(BLE_Launch);   
+
+    // reset dumped 
+    dumped = 0; 
 }
 
 // Most parameters are unused in our case because we only have one connection, 
@@ -67,7 +70,6 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
         }
         // Otherwise send empty file message and move to next session if applicable.
         else{
-            free(SPIFFS_files.file_path[curr_session]);
             curr_session++; 
             os_mbuf_append(ctxt->om, "End of file reached.", sizeof("End of file reached."));
         }
@@ -78,6 +80,9 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
         os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
         LED_notify(BLE_PAIRED);
     }
+
+    // With any attempt to read, mark as dumped
+    dumped = 1; 
    
     return 0; 
 }
@@ -142,7 +147,7 @@ void BLE_Launch(void *param){
     nimble_port_run(); 
 }
 
-void BLE_End(){
+bool BLE_End(){
     // Stop advertising if it's running
     if (ble_gap_adv_active()) {
         ble_gap_adv_stop();
@@ -156,5 +161,7 @@ void BLE_End(){
     curr_session = 0; 
 
     ESP_LOGI(BLE_TAG, "Bluetooth session terminated.");
+
+    return dumped; 
 }
 /********************************Public Functions***********************************/

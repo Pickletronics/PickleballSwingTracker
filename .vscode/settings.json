@@ -26,6 +26,7 @@
         "ble.h": "c",
         "led.h": "c",
         "spiffs.h": "c",
-        "circular_buffer.h": "c"
+        "circular_buffer.h": "c",
+        "fsm.h": "c"
     }
 }

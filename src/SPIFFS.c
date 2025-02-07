@@ -98,7 +98,8 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
     // Reset dump position for next session file.
     else {
         dump_position = 0; 
-        SPIFFS_Delete(path);
+        // SPIFFS_Delete(path);
+        fclose(f);
     }
     ESP_LOGI(SPIFFS_TAG, "Read %d bytes from %s.", bytesRead, path);
     return bytesRead; 
@@ -140,6 +141,7 @@ void SPIFFS_Delete(const char *path){
     } else {
         ESP_LOGE(SPIFFS_TAG, "Failed to delete file %s", path);
     }
+    dump_position = 0; 
 }
 /********************************Public Functions***********************************/
 

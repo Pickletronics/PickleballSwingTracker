@@ -22,19 +22,28 @@
 #define LED_TAG "LED"
 
 // RGB LED GPIO pins (Common Cathode)
-#define LED_RED_PIN     25    // A pin
-#define LED_GREEN_PIN   26    // C pin
-#define LED_BLUE_PIN    27    // B pin
+#define LED_RED_PIN                 25    // A pin
+#define LED_GREEN_PIN               26    // C pin
+#define LED_BLUE_PIN                27    // B pin
 // D pin (longest) connects to GND
 
 // Battery thresholds with 1k/1k divider (divides by 2)
-#define BATTERY_MAX     1850  // 3.7V/2
-#define BATTERY_MIN     1600  // 3.2V/2
+#define BATTERY_MAX                 1850  // 3.7V/2
+#define BATTERY_MIN                 1600  // 3.2V/2
 
 // ADC config
-#define BATTERY_ADC_CHANNEL    ADC_CHANNEL_7  // GPIO34
-#define ADC_SAMPLES     64
-#define ADC_ATTEN      ADC_ATTEN_DB_12
+#define BATTERY_ADC_CHANNEL         ADC_CHANNEL_7  // GPIO34
+#define ADC_SAMPLES                 64
+#define ADC_ATTEN                   ADC_ATTEN_DB_12
+
+// blink control (delay time)
+#define SLOW_BLINK                  300
+#define FAST_BLINK                  35
+
+// color intensity control (out of 255)
+#define DIM                         30
+#define MED                         2*MAX/3
+#define MAX                         255
 
 /*************************************Defines***************************************/
 
@@ -47,6 +56,7 @@ enum LED_STATE {
     BLE_PAIRED,
     BLE_TRANSFER,
     BATTERY_LEVEL,
+    SPIFFS_FULL,
     NUM_LED_STATES
 };
 
