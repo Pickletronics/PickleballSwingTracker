@@ -32,14 +32,13 @@ enum BUTTON_ACTION {
     NUM_ACTIONS
 };
 
-typedef struct state_t {
+typedef struct FSM_state_t {
     enum STATE current_state;
     enum STATE next_state;
-    bool skip_button_input;
     bool play_session_active;
     bool BLE_session_active;
     TaskHandle_t Play_Session_Handle;;
-} state_t;
+} FSM_state_t;
 
 /****************************Data Structure Definitions*****************************/
 

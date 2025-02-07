@@ -8,12 +8,48 @@
 
 /********************************Public Variables***********************************/
 
+SemaphoreHandle_t Button_sem;
+QueueHandle_t Button_queue;
+
 gptimer_handle_t Button_timer;
+int8_t num_presses = 0;
 volatile bool timer_trig = false;
-extern uint8_t num_presses;
-extern bool hold_detected;
+volatile bool hold_detected = false;
 
 /********************************Public Variables***********************************/
+
+/********************************Static Functions**********************************/
+
+static int Button_Read() {
+    return gpio_get_level(BUTTON_PIN);
+}
+
+static void Button_Timer_Init(){
+    // Initialize button queue
+    Button_queue = xQueueCreate(4, sizeof(int8_t));
+
+    // Configure the Timer/Counter for button press detection timing
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_RES, 
+    };
+    gptimer_new_timer(&timer_config, &Button_timer);
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = Button_Timer_Callback,
+    };
+    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
+
+    gptimer_enable(Button_timer);
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = ALARM_COUNT,
+    };
+    gptimer_set_alarm_action(Button_timer, &alarm_config);
+}
+
+/********************************Static Functions**********************************/
 
 /********************************Public Functions***********************************/
 
@@ -49,41 +85,17 @@ void Button_Init() {
 
     // Initialize the Timer/Counter for the Button
     Button_Timer_Init();
-}
 
-int Button_Read() {
-    return gpio_get_level(BUTTON_PIN);
-}
+    Button_sem = xSemaphoreCreateBinary();
 
-void Button_Timer_Init(){
-    // Initialize button queue
-    Button_queue = xQueueCreate(4, sizeof(int8_t));
-
-    // Configure the Timer/Counter for button press detection timing
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = TIMER_RES, 
-    };
-    gptimer_new_timer(&timer_config, &Button_timer);
-
-    gptimer_event_callbacks_t cbs = {
-        .on_alarm = Button_Timer_Callback,
-    };
-    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
-
-    gptimer_enable(Button_timer);
-
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = ALARM_COUNT,
-    };
-    gptimer_set_alarm_action(Button_timer, &alarm_config);
+    // start button task
+    xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
 }
 
 void Button_task(void *args) {
     TickType_t curr_time, press_time;
     const TickType_t debounce_time = pdMS_TO_TICKS(30);
-    const TickType_t hold_threshold = pdMS_TO_TICKS(400);
+    const TickType_t hold_threshold = pdMS_TO_TICKS(2000);
 
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {

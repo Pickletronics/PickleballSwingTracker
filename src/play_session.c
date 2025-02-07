@@ -8,12 +8,7 @@
 
 /********************************Public Variables***********************************/
 
-volatile bool hold_detected = false;
-volatile int8_t num_presses = 0;
 uint8_t num_sessions = 0; 
-
-// for testing purposes
-bool impact_detected = false;
 
 data_processing_packet_t play_session_packets[MAX_PROCESSING_THREADS];
 SPIFFS_packet_t SPIFFS_packets[MAX_SPIFFS_THREADS];
@@ -47,6 +42,7 @@ void Play_Session_task(void *args) {
     bool first_sample = true;
 
     // demo led init
+    LED_notify(BATTERY_LEVEL);
     const TickType_t LED_on_time = pdMS_TO_TICKS(500);
     TickType_t last_impact_time = 0;
     const gpio_num_t LED_PIN = 2;
@@ -72,6 +68,7 @@ void Play_Session_task(void *args) {
     }
     else{
         ESP_LOGE(PLAY_SESSION_TAG, "MAX SESSIONS REACHED");
+        LED_notify(SPIFFS_FULL);
 
         // do nothing
         while (1){

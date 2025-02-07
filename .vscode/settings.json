@@ -23,9 +23,10 @@
         "streambuf": "c",
         "tuple": "c",
         "type_traits": "c",
-        "circular_buffer.h": "c",
         "ble.h": "c",
         "led.h": "c",
         "spiffs.h": "c",
+        "circular_buffer.h": "c",
+        "fsm.h": "c"
     }
 }
