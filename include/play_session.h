@@ -54,7 +54,6 @@ typedef struct vector3D_t {
 } vector3D_t;
 
 typedef struct data_processing_packet_t {
-    // FILE* f;
     char* SPIFFS_file_path;
     bool active;
     uint32_t num_samples;
@@ -62,13 +61,18 @@ typedef struct data_processing_packet_t {
     IMU_sample_t* processing_buffer;
 } data_processing_packet_t;
 
+typedef struct SPIFFS_write_data_t {
+    uint32_t num_samples;
+    float* accel_magnitude; 
+    float impact_strength; 
+    float impact_rotation; 
+} SPIFFS_write_data_t; 
+
 typedef struct SPIFFS_packet_t {
-    // FILE* f;
     char* SPIFFS_file_path;
     bool active;
-    uint16_t test_1;
-    uint16_t test_2;
-    uint16_t test_3;
+    uint16_t test[3];
+    SPIFFS_write_data_t data; 
 } SPIFFS_packet_t;
 
 typedef struct SPIFFS_files_t {

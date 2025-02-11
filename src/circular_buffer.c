@@ -95,7 +95,7 @@ IMU_sample_t* Circular_Buffer_Sized_DDump(uint32_t buffer_index, uint32_t num_sa
 void Circular_Buffer_Print(uint32_t buffer_index) {
     for (uint32_t i = 0; i < BUFFER_SIZE; i++) {
         // dump buffer to terminal for viewing - make sure it is reset
-        printf("%d", buffers[buffer_index].buffer[i].IMU.accel.x);
+        printf("%d,", buffers[buffer_index].buffer[i].IMU.accel.x);
     }
     printf("\n");
 }

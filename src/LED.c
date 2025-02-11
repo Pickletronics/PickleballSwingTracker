@@ -154,7 +154,7 @@ void LED_task(void *pvParameters) {
         uint32_t notification;
         if (xTaskNotifyWait(0, 0, &notification, 0) == pdTRUE) {
             led_state = (enum LED_STATE) notification;
-            ESP_LOGI(LED_TAG, "Notification: %ld\n", notification);
+            // ESP_LOGI(LED_TAG, "Notification: %ld\n", notification);
         }
 
         switch (led_state) {
@@ -220,7 +220,7 @@ void LED_task(void *pvParameters) {
 
 void LED_notify(uint32_t notification) {
     xTaskNotify(LED_Handle, notification, eSetValueWithOverwrite);
-    ESP_LOGI(LED_TAG, "Notification sent: %ld\n", notification);
+    // ESP_LOGI(LED_TAG, "Notification sent: %ld\n", notification);
 }
 
 /********************************Public Functions***********************************/
