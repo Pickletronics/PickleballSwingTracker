@@ -14,7 +14,7 @@ TaskHandle_t LED_Handle;
 
 /********************************Public Variables***********************************/
 
-/********************************Static Functions**********************************/
+/*********************************Static Functions**********************************/
 
 static void set_RGB(uint8_t R, uint8_t G, uint8_t B) {
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, R);    // R
@@ -68,7 +68,7 @@ static uint8_t calculate_battery_percentage(uint32_t voltage) {
     return (uint8_t)percentage;
 }
 
-/********************************Static Functions**********************************/
+/*********************************Static Functions**********************************/
 
 /********************************Public Functions***********************************/
 

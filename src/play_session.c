@@ -28,21 +28,25 @@ void Play_Session_task(void *args) {
     // sampling settings
     IMU_sample_t sample;
     uint32_t sample_count = 0;
-    const uint32_t NUM_SAMPLES_WAIT = 400;
+    const uint32_t NUM_SAMPLES_WAIT = 150;
     const uint32_t NUM_SAMPLES_TOTAL = NUM_SAMPLES_WAIT*2;
+
+    // uint32_t num_samples = 0;
+    // TickType_t init_time_sec = xTaskGetTickCount();
+    // TickType_t curr_time_sec = xTaskGetTickCount();
+    // TickType_t one_sec = pdMS_TO_TICKS(pdTICKS_TO_MS(1000));
 
     // circular buffer init
     Circular_Buffer_Init(IMU_BUFFER);
 
     // impact settings
-    const float IMPACT_CHANGE_THRESHOLD = 20.0f;
+    const float IMPACT_CHANGE_THRESHOLD = 90.0f;
     const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
     float prev_accel_magnitude = 0.0f;
     bool impact_detected = false;
     bool first_sample = true;
 
     // demo led init
-    LED_notify(BATTERY_LEVEL);
     const TickType_t LED_on_time = pdMS_TO_TICKS(500);
     TickType_t last_impact_time = 0;
     const gpio_num_t LED_PIN = 2;
@@ -95,11 +99,19 @@ void Play_Session_task(void *args) {
         // write data
         Circular_Buffer_Write(IMU_BUFFER, sample);
 
+        // num_samples++;
+        // curr_time_sec = xTaskGetTickCount();
+        // if (curr_time_sec > init_time_sec + one_sec) {
+        //     // printf("%ld samples per second\n", num_samples);
+        //     num_samples = 0;
+        //     init_time_sec = xTaskGetTickCount();
+        // }
+
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
-            sample.IMU.accel.x * SENSITIVITY,
-            sample.IMU.accel.y * SENSITIVITY,
-            sample.IMU.accel.z * SENSITIVITY
+            sample.IMU.accel.x * ACCEL_SENSITIVITY,
+            sample.IMU.accel.y * ACCEL_SENSITIVITY,
+            sample.IMU.accel.z * ACCEL_SENSITIVITY
         };
         float accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
         float magnitude_change = fabs(accel_magnitude - prev_accel_magnitude);
@@ -174,39 +186,39 @@ void Process_Data_task(void *args) {
     while (1) {
 
         // acquire UART sem
-        // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
-        //     for (uint32_t i = 0; i < packet->num_samples; i++) {
+        if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
+            for (uint32_t i = 0; i < packet->num_samples; i++) {
 
-        //         // Convert raw accelerometer values to m/s^2
-        //         vector3D_t accel_real = {
-        //             packet->processing_buffer[i].IMU.accel.x * SENSITIVITY,
-        //             packet->processing_buffer[i].IMU.accel.y * SENSITIVITY,
-        //             packet->processing_buffer[i].IMU.accel.z * SENSITIVITY
-        //         };
+                // Convert raw accelerometer values to m/s^2
+                vector3D_t accel_real = {
+                    packet->processing_buffer[i].IMU.accel.x * ACCEL_SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.y * ACCEL_SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.z * ACCEL_SENSITIVITY
+                };
 
-        //         union {
-        //             float accel_magnitude;
-        //             uint32_t accel_magnitude_u32;
-        //         } float_union;
+                union {
+                    float accel_magnitude;
+                    uint32_t accel_magnitude_u32;
+                } float_union;
 
-        //         float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+                float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
 
-        //         // output data over uart
-        //         char byte_data[4] = {
-        //             (float_union.accel_magnitude_u32 >> 0) & 0xFF,
-        //             (float_union.accel_magnitude_u32 >> 8) & 0xFF,
-        //             (float_union.accel_magnitude_u32 >> 16) & 0xFF,
-        //             (float_union.accel_magnitude_u32 >> 24) & 0xFF
-        //         };
+                // output data over uart
+                char byte_data[4] = {
+                    (float_union.accel_magnitude_u32 >> 0) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 8) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 16) & 0xFF,
+                    (float_union.accel_magnitude_u32 >> 24) & 0xFF
+                };
 
-        //         UART_write(byte_data, 4);
+                UART_write(byte_data, 4);
 
-        //         // printf("%f\n", float_union.accel_magnitude);
-        //     }
+                // printf("%f\n", float_union.accel_magnitude);
+            }
 
-        //     // Give up the semaphore 
-        //     xSemaphoreGive(UART_sem);
-        // }
+            // Give up the semaphore 
+            xSemaphoreGive(UART_sem);
+        }
 
         // simulate work
         vTaskDelay(pdTICKS_TO_MS(100));
@@ -222,7 +234,7 @@ void Process_Data_task(void *args) {
 
         // FIXME: data is lost if no space left
         if (packet_index == -1) {
-            printf("Max SPIFFS packets being processed.\n");
+            ESP_LOGE(PROCESSING_TAG,"Max SPIFFS packets being processed.\n");
         }
         else {
             srand((unsigned int)xTaskGetTickCount());

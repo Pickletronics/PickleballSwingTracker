@@ -121,6 +121,10 @@ void Button_task(void *args) {
 
             // Increment press counter if pressed
             num_presses++;
+            
+            // Debounce button release
+            vTaskDelay(debounce_time);
+
             // Restart the timer if running
             if (num_presses == 0){ gptimer_enable(Button_timer); }
             gptimer_set_raw_count(Button_timer, 0);

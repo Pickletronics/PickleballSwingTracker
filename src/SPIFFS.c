@@ -120,7 +120,6 @@ void SPIFFS_Write(const char *path, const char *data){
     }
     fflush(f);
     fclose(f);
-    ESP_LOGI(SPIFFS_TAG, "Wrote to %s successfully.", path);
 }
 
 void SPIFFS_Clear(const char *path){
