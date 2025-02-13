@@ -11,6 +11,8 @@
 // Global handle for MPU9250
 MPU9250_handle_t mpu;
 
+bool init_mag = false;
+
 /********************************Public Variables***********************************/
 
 /*********************************Static Functions**********************************/
@@ -135,7 +137,6 @@ bool MPU9250_Init() {
     MPU9250_write(PWR_MGMT_1, 0x00);
 
     // who am i?
-    bool init_mag = false;
     temp = MPU9250_read_WHOAMI();
     if (temp == 0x71) {
         ESP_LOGI(IMU_TAG, "MPU9250 dectected.");
@@ -198,7 +199,8 @@ bool MPU9250_Init() {
 void MPU9250_update() {
     MPU9250_read_accelerometer();
     MPU9250_read_gyroscope();
-    MPU9250_read_magnetometer();
+    if (init_mag) 
+        MPU9250_read_magnetometer();
 }
 
 /********************************Public Functions***********************************/

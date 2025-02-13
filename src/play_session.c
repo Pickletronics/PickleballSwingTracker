@@ -40,7 +40,7 @@ void Play_Session_task(void *args) {
     Circular_Buffer_Init(IMU_BUFFER);
 
     // impact settings
-    const float IMPACT_CHANGE_THRESHOLD = 60.0f;
+    const float IMPACT_CHANGE_THRESHOLD = 90.0f;
     const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
     float prev_accel_magnitude = 0.0f;
     bool impact_detected = false;
