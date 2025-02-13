@@ -132,7 +132,7 @@ bool MPU9250_Init() {
     uint8_t temp = 0;
 
     // wake up chip
-    MPU9250_write(MPU_9250_PWR_MGMT_1, 0x00);
+    MPU9250_write(PWR_MGMT_1, 0x00);
 
     // who am i?
     bool init_mag = false;
@@ -176,7 +176,7 @@ bool MPU9250_Init() {
         MPU9250_write(I2C_MST_CTRL, 0x0D); // 400 kHz I2C clk
 
         // who am i?
-        temp = AK8963_read(MAG_WHOAMI);
+        temp = AK8963_read(AK8963_WHOAMI);
         if (temp == 0x48) {
             ESP_LOGI(IMU_TAG, "AK8963 dectected.");
         }
@@ -186,9 +186,9 @@ bool MPU9250_Init() {
         }
 
         // continuous conversions
-        AK8963_write(MAG_CFG, 0x00);  // power down
+        AK8963_write(AK8963_CFG, 0x00);  // power down
         vTaskDelay(pdTICKS_TO_MS(10));
-        AK8963_write(MAG_CFG, 0x16);  // continuous measurement mode 2 (100 Hz)
+        AK8963_write(AK8963_CFG, 0x16);  // continuous measurement mode 2 (100 Hz)
         vTaskDelay(pdTICKS_TO_MS(10));
     }
 

@@ -16,13 +16,23 @@
 
 #define IMU_TAG "IMU"
 
+// configuration
 #define MPU9250_CS              GPIO_NUM_5
 #define MPU9250_MAX_CLK         1000000
+#define ACCEL_SENSITIVITY       (16.0f * 9.81f / 32768.0f)
 
+// MPU9250 registers
 #define MPU9250_WHOAMI          117
-#define MPU_9250_PWR_MGMT_1     107
-
-#define SENSITIVITY             (16.0f * 9.81f / 32768.0f)
+#define PWR_MGMT_1              107
+#define USER_CTRL               0x6A
+#define I2C_MST_EN              0x20
+#define I2C_MST_CTRL            0x24
+#define I2C_SLV0_ADDR           0x25
+#define I2C_SLV0_REG            0x26
+#define I2C_SLV0_CTRL           0x27
+#define I2C_SLV0_EN             0x80
+#define I2C_SLV0_DO             0x63
+#define EXT_SENS_DATA_00        0x49
 
 #define ACCEL_CFG_1             28
 #define ACCEL_CFG_2             29
@@ -41,31 +51,19 @@
 #define GYRO_ZH                 71
 #define GYRO_ZL                 72
 
-#define USER_CTRL               0x6A
-#define I2C_MST_EN              0x20
-#define I2C_MST_CTRL            0x24
-#define I2C_SLV0_ADDR           0x25
-#define I2C_SLV0_REG            0x26
-#define I2C_SLV0_CTRL           0x27
-#define I2C_SLV0_EN             0x80
-
-#define I2C_SLV0_DO             0x63
-#define EXT_SENS_DATA_00        0x49
-
+// AK8963 registers
 #define AK8963_ADDR             0x0C
+#define AK8963_WHOAMI           0x00
+#define AK8963_CFG              0x0A
+#define AK8963_ST1              0x02
+#define AK8963_ST2              0x09
 
-#define MAG_WHOAMI              0x00
-
-#define MAG_CFG               0x0A
-#define AK8963_ST1            0x02
-#define AK8963_ST2            0x09
-
-#define MAG_XL                0x03
-#define MAG_XH                0x04
-#define MAG_YL                0x05
-#define MAG_YH                0x06
-#define MAG_ZL                0x07
-#define MAG_ZH                0x08
+#define MAG_XL                  0x03
+#define MAG_XH                  0x04
+#define MAG_YL                  0x05
+#define MAG_YH                  0x06
+#define MAG_ZL                  0x07
+#define MAG_ZH                  0x08
 
 /*************************************Defines***************************************/
 

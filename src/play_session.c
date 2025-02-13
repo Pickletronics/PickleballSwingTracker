@@ -109,9 +109,9 @@ void Play_Session_task(void *args) {
 
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
-            sample.IMU.accel.x * SENSITIVITY,
-            sample.IMU.accel.y * SENSITIVITY,
-            sample.IMU.accel.z * SENSITIVITY
+            sample.IMU.accel.x * ACCEL_SENSITIVITY,
+            sample.IMU.accel.y * ACCEL_SENSITIVITY,
+            sample.IMU.accel.z * ACCEL_SENSITIVITY
         };
         float accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
         float magnitude_change = fabs(accel_magnitude - prev_accel_magnitude);
@@ -191,9 +191,9 @@ void Process_Data_task(void *args) {
 
                 // Convert raw accelerometer values to m/s^2
                 vector3D_t accel_real = {
-                    packet->processing_buffer[i].IMU.accel.x * SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.y * SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.z * SENSITIVITY
+                    packet->processing_buffer[i].IMU.accel.x * ACCEL_SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.y * ACCEL_SENSITIVITY,
+                    packet->processing_buffer[i].IMU.accel.z * ACCEL_SENSITIVITY
                 };
 
                 union {
