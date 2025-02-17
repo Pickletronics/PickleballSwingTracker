@@ -15,9 +15,10 @@
 /*************************************Defines***************************************/
 
 #define BUTTON_PIN          GPIO_NUM_34
-#define TIMER_RES           1000000                    // 1MHz, 1 tick=1us
-#define ALARM_COUNT         ALARM_PERIOD_SEC * 1000000 // alarm period
-#define ALARM_PERIOD_SEC    0.4                        // 400 ms
+#define TIMER_RES           1000000                      // 1MHz, 1 tick=1us
+#define ALARM_PERIOD_SEC    0.3                          // 300 ms
+#define ALARM_COUNT         ALARM_PERIOD_SEC * TIMER_RES // alarm period
+
 
 /*************************************Defines***************************************/
 
