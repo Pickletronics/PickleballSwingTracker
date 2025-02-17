@@ -22,8 +22,8 @@
 
 #define DEVICE_UUID         0x0180
 #define READ_UUID           0xFEF4
-#define BLE_PAYLOAD_SIZE    247 
-#define BLE_MTU             256
+#define BLE_PAYLOAD_SIZE    508
+#define BLE_MTU             517
 
 #define BLE_TAG "BLE"
 
@@ -36,11 +36,13 @@
 
 void BLE_Start(void);
 int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg); 
+void BLE_Send_Notification(uint16_t conn_handle, char *data, size_t len);
 void BLE_Advertise(void); 
 int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg);
 void BLE_Sync(void);
 void BLE_Launch(void *param);
 bool BLE_End(void);
+void dump_data(void);
  
 /********************************Public Functions***********************************/
 

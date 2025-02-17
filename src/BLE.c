@@ -9,6 +9,8 @@
 /********************************Public Variables***********************************/
 
 char *BLE_NAME = "BLE-Server";
+static uint16_t conn_handle = 0;
+uint16_t control_notif_handle; 
 uint8_t ble_addr_type;
 uint8_t curr_session = 0;
 bool dumped = 0; 
@@ -17,8 +19,9 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
     {.type = BLE_GATT_SVC_TYPE_PRIMARY,
      .uuid = BLE_UUID16_DECLARE(DEVICE_UUID),                 // Define UUID for client type
      .characteristics = (struct ble_gatt_chr_def[]){
-         {.uuid = BLE_UUID16_DECLARE(READ_UUID),           // Define UUID for reading
-          .flags = BLE_GATT_CHR_F_READ,
+         {.uuid = BLE_UUID16_DECLARE(READ_UUID),      // Define UUID for reading
+          .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+          .val_handle = &control_notif_handle,
           .access_cb = BLE_Client_Read},
          {0}}},
     {0}};
@@ -62,7 +65,7 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
         // Create buffer to store SPIFFS data
         char *buffer = malloc(BLE_PAYLOAD_SIZE);
         size_t bytesRead = SPIFFS_Dump(SPIFFS_files.file_path[curr_session], buffer, BLE_PAYLOAD_SIZE);
-        printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
+        // printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
 
         // If file was not empty (or fully read), send the data read
         if(bytesRead > 0){
@@ -77,14 +80,20 @@ int BLE_Client_Read(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_
     }
     // Else you have read all sessions.
     else {
-        os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
         LED_notify(BLE_PAIRED);
+        os_mbuf_append(ctxt->om, "Dumped all sessions.", sizeof("Dumped all sessions."));
     }
 
     // With any attempt to read, mark as dumped
     dumped = 1; 
    
     return 0; 
+}
+
+void BLE_Send_Notification(uint16_t conn_handle, char *data, size_t len) {
+    printf("notification sent!");
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(data, len);
+    ble_gattc_notify_custom(conn_handle, control_notif_handle, om);
 }
 
 void BLE_Advertise(){
@@ -118,17 +127,30 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
         }
         LED_notify(BLE_PAIRED);
         ESP_LOGI(BLE_TAG, "Connected Successfully!"); 
+
+        // Set faster connection parameters
+        struct ble_gap_upd_params conn_params = {
+            .itvl_min = 6, 
+            .itvl_max = 12,
+            .latency = 0,
+            .supervision_timeout = 400
+        };
+        ble_gap_update_params(event->connect.conn_handle, &conn_params);
+        conn_handle = event->connect.conn_handle; 
+        dump_data();
         break; 
 
     // Advertise again if client disconnects. 
     case BLE_GAP_EVENT_DISCONNECT: 
         ESP_LOGI(BLE_TAG, "Connection terminated. Advertising again.");
+        conn_handle = 0; 
         BLE_Advertise(); 
         break;
 
     // Advertise again after completion (timeout)
     case BLE_GAP_EVENT_ADV_COMPLETE: 
         ESP_LOGI(BLE_TAG, "Advertising event timed out. Advertising again.");
+        conn_handle = 0; 
         BLE_Advertise(); 
         break; 
 
@@ -136,6 +158,40 @@ int BLE_GAP_Event_Handler(struct ble_gap_event *event, void *arg){
         break; 
     }
     return 0; 
+}
+
+void dump_data(){
+    printf("conn handle: %d", conn_handle);
+    if(conn_handle != 0){
+        LED_notify(BLE_TRANSFER);
+        // With any attempt to read, mark as dumped
+        dumped = 1; 
+        // Make sure there is a valid session to read
+        if(curr_session < SPIFFS_files.num_files){
+            // Create buffer to store SPIFFS data
+            char *buffer = malloc(BLE_PAYLOAD_SIZE);
+            size_t bytesRead = SPIFFS_Dump(SPIFFS_files.file_path[curr_session], buffer, BLE_PAYLOAD_SIZE);
+            printf("Read %zu bytes: %.*s\n", bytesRead, (int)bytesRead, buffer); // Debugging
+
+            // If file was not empty (or fully read), send the data read
+            if(bytesRead > 0){
+                BLE_Send_Notification(conn_handle, buffer, bytesRead);
+                dump_data(); 
+            }
+            // Otherwise send empty file message and move to next session if applicable.
+            else{
+                curr_session++; 
+                BLE_Send_Notification(conn_handle, "End of file reached.", sizeof("End of file reached."));
+                dump_data(); 
+            }
+            free(buffer);
+        }
+        // Else you have read all sessions.
+        else {
+            LED_notify(BLE_PAIRED);
+            BLE_Send_Notification(conn_handle, "Dumped all sessions.", sizeof("Dumped all sessions."));
+        }
+    }
 }
 
 void BLE_Sync(){
@@ -161,7 +217,6 @@ bool BLE_End(){
     curr_session = 0; 
 
     ESP_LOGI(BLE_TAG, "Bluetooth session terminated.");
-
     return dumped; 
 }
 /********************************Public Functions***********************************/
