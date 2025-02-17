@@ -77,7 +77,7 @@ void SPIFFS_Print(const char *path){
 
     while ((bytesRead = fread(buffer, 1, sizeof(buffer) - 1, f)) > 0) {
         buffer[bytesRead] = '\0'; 
-        ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer);
+        // ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer); // debugging
     }
 
     fclose(f);

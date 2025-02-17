@@ -22,8 +22,8 @@
 
 #define DEVICE_UUID         0x0180
 #define READ_UUID           0xFEF4
-#define BLE_PAYLOAD_SIZE    247 
-#define BLE_MTU             256
+#define BLE_PAYLOAD_SIZE    508
+#define BLE_MTU             517
 
 #define BLE_TAG "BLE"
 

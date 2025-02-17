@@ -299,13 +299,13 @@ void SPIFFS_Write_task(void *args){
                 for(uint32_t i = 0; i < packet->data.num_samples; i++){
                     int written; 
                     if(i == 0){
-                        written = snprintf(buffer + offset, buffer_size - offset, "[%.3f,", packet->data.accel_magnitude[i]);
+                        written = snprintf(buffer + offset, buffer_size - offset, "[%.1f,", packet->data.accel_magnitude[i]);
                     }
                     else if(i == packet->data.num_samples-1){
-                        written = snprintf(buffer + offset, buffer_size - offset, "%.3f]\n", packet->data.accel_magnitude[i]);
+                        written = snprintf(buffer + offset, buffer_size - offset, "%.1f]\n", packet->data.accel_magnitude[i]);
                     }
                     else {
-                        written = snprintf(buffer + offset, buffer_size - offset, "%.3f,", packet->data.accel_magnitude[i]);
+                        written = snprintf(buffer + offset, buffer_size - offset, "%.1f,", packet->data.accel_magnitude[i]);
                     }
 
                     if (written < 0 || offset + written >= buffer_size) {
@@ -327,19 +327,19 @@ void SPIFFS_Write_task(void *args){
 
                 // Write the impact strength and rotation to the file 
                 SPIFFS_Write(packet->SPIFFS_file_path, "Impact Strength:\n"); 
-                sprintf(buffer, "%.3f\n", packet->data.impact_strength); 
+                sprintf(buffer, "%.1f\n", packet->data.impact_strength); 
                 SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
                 SPIFFS_Write(packet->SPIFFS_file_path, "Impact Rotation:\n"); 
-                sprintf(buffer, "%.3f\n", packet->data.impact_rotation); 
+                sprintf(buffer, "%.1f\n", packet->data.impact_rotation); 
                 SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
-                SPIFFS_Print(packet->SPIFFS_file_path); // debugging
+                // SPIFFS_Print(packet->SPIFFS_file_path); // debugging
 
                 // Free dynamic memory created for accel array 
-                // free(SPIFFS_data.accel_magnitude);
-                // SPIFFS_data.accel_magnitude = NULL;
-                // packet->data.accel_magnitude = NULL; 
+                free(SPIFFS_data.accel_magnitude);
+                SPIFFS_data.accel_magnitude = NULL;
+                packet->data.accel_magnitude = NULL; 
             }
             else {
                 // Create string of passed in data
