@@ -71,12 +71,16 @@ void SPIFFS_Print(const char *path){
         ESP_LOGE(SPIFFS_TAG, "Failed to open file for reading");
         return;
     }
-    char buffer[1024];
-    size_t bytesRead = fread(buffer, 1, sizeof(buffer) - 1, f);
-    buffer[bytesRead] = '\0'; 
-    fclose(f);
 
-    ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer);
+    char buffer[512];
+    size_t bytesRead; 
+
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer) - 1, f)) > 0) {
+        buffer[bytesRead] = '\0'; 
+        // ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer); // debugging
+    }
+
+    fclose(f);
 }
 
 size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
