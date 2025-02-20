@@ -18,8 +18,6 @@ SPIFFS_files_t SPIFFS_files = {
 };
 SPIFFS_write_data_t SPIFFS_data; 
 
-bool dump_real_data = true;  
-
 /********************************Public Variables***********************************/
 
 /********************************Public Functions***********************************/
@@ -31,8 +29,6 @@ void Play_Session_task(void *args) {
     // sampling settings
     IMU_sample_t sample;
     uint32_t sample_count = 0;
-    const uint32_t NUM_SAMPLES_WAIT = 150;
-    const uint32_t NUM_SAMPLES_TOTAL = NUM_SAMPLES_WAIT*2;
 
     // uint32_t num_samples = 0;
     // TickType_t init_time_sec = xTaskGetTickCount();
@@ -148,7 +144,7 @@ void Play_Session_task(void *args) {
             sample_count++;
 
             // once desired number of samples, dump buffer and spawn processing thread
-            if (sample_count >= NUM_SAMPLES_WAIT) {
+            if (sample_count >= NUM_SAMPLES_IMPACT) {
                 // find free packet
                 int8_t packet_index = -1;
                 for (int8_t i = 0; i < MAX_PROCESSING_THREADS; i++) {
@@ -167,12 +163,12 @@ void Play_Session_task(void *args) {
                     play_session_packets[packet_index].SPIFFS_file_path = file_path;
                     play_session_packets[packet_index].active = true;
                     play_session_packets[packet_index].num_samples = NUM_SAMPLES_TOTAL;
-                    play_session_packets[packet_index].impact_start_index = NUM_SAMPLES_TOTAL - NUM_SAMPLES_WAIT;
+                    play_session_packets[packet_index].impact_start_index = NUM_SAMPLES_TOTAL - NUM_SAMPLES_IMPACT;
                     play_session_packets[packet_index].processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
 
                     // spawn data processing thread
                     // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
-                    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 4096, (void*)&play_session_packets[packet_index], 1, NULL, 1);                 
+                    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 1, NULL, 1);                 
                 }
 
                 // reset necessary variables
@@ -185,55 +181,90 @@ void Play_Session_task(void *args) {
 
 void Process_Data_task(void *args) {
     data_processing_packet_t* packet = (data_processing_packet_t*) args;
+    float accel_magnitude[NUM_SAMPLES_TOTAL];
+    float rotation_axis[NUM_SAMPLES_TOTAL];
 
     while (1) {
 
-        // acquire UART sem
-        // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {    
-            SPIFFS_data.accel_magnitude = (float*)malloc(packet->num_samples * sizeof(float));
-            for (uint32_t i = 0; i < packet->num_samples; i++) {
+        SPIFFS_data.impact_region = (float*)malloc(NUM_SAMPLES_IMPACT * sizeof(float));
+        for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
 
-                // Convert raw accelerometer values to m/s^2
-                vector3D_t accel_real = {
-                    packet->processing_buffer[i].IMU.accel.x * ACCEL_SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.y * ACCEL_SENSITIVITY,
-                    packet->processing_buffer[i].IMU.accel.z * ACCEL_SENSITIVITY
-                };
+            // Convert raw accelerometer values to m/s^2
+            vector3D_t accel_real = {
+                packet->processing_buffer[i].IMU.accel.x * ACCEL_SENSITIVITY,
+                packet->processing_buffer[i].IMU.accel.y * ACCEL_SENSITIVITY,
+                packet->processing_buffer[i].IMU.accel.z * ACCEL_SENSITIVITY
+            };
 
-                // union {
-                //     float accel_magnitude;
-                //     uint32_t accel_magnitude_u32;
-                // } float_union;
-
-                // float_union.accel_magnitude = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
-
-                // Write data to acceleration array for SPIFFS
-                SPIFFS_data.accel_magnitude[i] = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
-
-            //     // // output data over uart
-            //     // char byte_data[4] = {
-            //     //     (float_union.accel_magnitude_u32 >> 0) & 0xFF,
-            //     //     (float_union.accel_magnitude_u32 >> 8) & 0xFF,
-            //     //     (float_union.accel_magnitude_u32 >> 16) & 0xFF,
-            //     //     (float_union.accel_magnitude_u32 >> 24) & 0xFF
-            //     // };
-
-            //     // UART_write(byte_data, 4);
-
-            //     // printf("%f\n", float_union.accel_magnitude);
+            accel_magnitude[i] = sqrt(accel_real.x * accel_real.x + accel_real.y * accel_real.y + accel_real.z * accel_real.z);
+            
+            // copy impact region for dump
+            if (i >= packet->impact_start_index) {
+                SPIFFS_data.impact_region[i-packet->impact_start_index] = accel_magnitude[i];
             }
+
+            // get max accel before impact
+            if (i < packet->impact_start_index) {
+                // update max impact strength
+                if (accel_magnitude[i] > SPIFFS_data.impact_strength) {
+                    SPIFFS_data.impact_strength = accel_magnitude[i];
+                }
+            }
+
+            // convert raw gyroscope data to dps
+            vector3D_t gyro_real = {
+                packet->processing_buffer[i].IMU.gyro.x * GYRO_SENSITIVITY,
+                packet->processing_buffer[i].IMU.gyro.y * GYRO_SENSITIVITY,
+                packet->processing_buffer[i].IMU.gyro.z * GYRO_SENSITIVITY
+            };
+
+            rotation_axis[i] = fabs(gyro_real.z);
+
+            // get max accel before impact
+            if (i < packet->impact_start_index) {
+                // update max gyro axis
+                if (rotation_axis[i] > SPIFFS_data.max_rotation) {
+                    SPIFFS_data.max_rotation = rotation_axis[i];
+                }
+            }
+
+            // populate impact roation
+            if (i == packet->impact_start_index) {
+                SPIFFS_data.impact_rotation = rotation_axis[i];
+            }
+            
+        }
+
+        // UART dump to serial plot
+        // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {   
+        //      union {
+        //         float real_data;
+        //         uint32_t real_data_u32;
+        //     } float_union; 
+
+        //     for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
+
+        //         float_union.real_data = accel_magnitude[i];
+        //         // float_union.real_data = rotation_axis[i];
+
+        //         // output data over uart
+        //         char byte_data[4] = {
+        //             (float_union.real_data_u32 >> 0) & 0xFF,
+        //             (float_union.real_data_u32 >> 8) & 0xFF,
+        //             (float_union.real_data_u32 >> 16) & 0xFF,
+        //             (float_union.real_data_u32 >> 24) & 0xFF
+        //         };
+
+        //         UART_write(byte_data, 4);
+        //     }
 
         //     // Give up the semaphore 
         //     xSemaphoreGive(UART_sem);
         // }
 
-        // Write impact stength and rotation to SPIFFS packet
-        SPIFFS_data.impact_strength = 0.0; 
-        SPIFFS_data.impact_rotation = 0.0;
-        SPIFFS_data.num_samples = packet->num_samples; 
-
-        // simulate work
-        vTaskDelay(pdTICKS_TO_MS(100));
+        // printf("Impact strength: %.1f\n", SPIFFS_data.impact_strength);
+        // printf("Impact rotation: %.1f\n", SPIFFS_data.impact_rotation);
+        // printf("Max rotation: %.1f\n", SPIFFS_data.max_rotation);
 
         // find free packet
         int8_t packet_index = -1;
@@ -249,7 +280,7 @@ void Process_Data_task(void *args) {
             printf("Max SPIFFS packets being processed.\n");
         }
         else {
-            if(dump_real_data){
+
                 srand((unsigned int)xTaskGetTickCount());
 
                 // populate data processing buffer
@@ -259,20 +290,8 @@ void Process_Data_task(void *args) {
 
                 // spawn data processing thread
                 xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 8192, (void *)&SPIFFS_packets[packet_index], 1, NULL, 1);
-            }
-            else {
-                srand((unsigned int)xTaskGetTickCount());
+            
 
-                // populate data processing buffer
-                SPIFFS_packets[packet_index].SPIFFS_file_path = packet->SPIFFS_file_path;
-                SPIFFS_packets[packet_index].active = true;
-                SPIFFS_packets[packet_index].test[0] = (uint16_t)rand();
-                SPIFFS_packets[packet_index].test[1] = (uint16_t)rand();
-                SPIFFS_packets[packet_index].test[2] = (uint16_t)rand();
-
-                // spawn data processing thread
-                xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 4096, (void *)&SPIFFS_packets[packet_index], 1, NULL, 1);
-            }
         }
 
         free(packet->processing_buffer);
@@ -288,67 +307,61 @@ void SPIFFS_Write_task(void *args){
 
     while(1){
         if (xSemaphoreTake(SPIFFS_sem, portMAX_DELAY) == pdTRUE) {
-            if(dump_real_data){
-                size_t buffer_size = 512; 
-                char buffer[buffer_size]; 
-                size_t offset = 0; 
+            size_t buffer_size = 512; 
+            char buffer[buffer_size]; 
+            size_t offset = 0; 
 
-                // Write the accleration magnitude array to the file 
-                SPIFFS_Write(packet->SPIFFS_file_path, "New Impact Data:\n"); 
-                SPIFFS_Write(packet->SPIFFS_file_path, "Acceleration Magnitude Array:\n"); 
-                for(uint32_t i = 0; i < packet->data.num_samples; i++){
-                    int written; 
-                    if(i == 0){
-                        written = snprintf(buffer + offset, buffer_size - offset, "[%.1f,", packet->data.accel_magnitude[i]);
-                    }
-                    else if(i == packet->data.num_samples-1){
-                        written = snprintf(buffer + offset, buffer_size - offset, "%.1f]\n", packet->data.accel_magnitude[i]);
-                    }
-                    else {
-                        written = snprintf(buffer + offset, buffer_size - offset, "%.1f,", packet->data.accel_magnitude[i]);
-                    }
-
-                    if (written < 0 || offset + written >= buffer_size) {
-                        // Buffer full, flush to SPIFFS
-                        SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-                        offset = 0;
-                        i--;  // Retry writing the same value after flushing
-                        continue;
-                    }
-
-                    // Update the offset tracker
-                    offset += written; 
+            // Write the accleration magnitude array to the file 
+            SPIFFS_Write(packet->SPIFFS_file_path, "New Impact Data:\n"); 
+            SPIFFS_Write(packet->SPIFFS_file_path, "Impact Array:\n"); 
+            for(uint32_t i = 0; i < NUM_SAMPLES_IMPACT; i++){
+                int written; 
+                if(i == 0){
+                    written = snprintf(buffer + offset, buffer_size - offset, "[%.1f,", packet->data.impact_region[i]);
+                }
+                else if(i == NUM_SAMPLES_IMPACT-1){
+                    written = snprintf(buffer + offset, buffer_size - offset, "%.1f]\n", packet->data.impact_region[i]);
+                }
+                else {
+                    written = snprintf(buffer + offset, buffer_size - offset, "%.1f,", packet->data.impact_region[i]);
                 }
 
-                // Write any remaining data in the buffer
-                if (offset > 0) {
+                if (written < 0 || offset + written >= buffer_size) {
+                    // Buffer full, flush to SPIFFS
                     SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+                    offset = 0;
+                    i--;  // Retry writing the same value after flushing
+                    continue;
                 }
 
-                // Write the impact strength and rotation to the file 
-                SPIFFS_Write(packet->SPIFFS_file_path, "Impact Strength:\n"); 
-                sprintf(buffer, "%.1f\n", packet->data.impact_strength); 
-                SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-
-                SPIFFS_Write(packet->SPIFFS_file_path, "Impact Rotation:\n"); 
-                sprintf(buffer, "%.1f\n", packet->data.impact_rotation); 
-                SPIFFS_Write(packet->SPIFFS_file_path, buffer);
-
-                // SPIFFS_Print(packet->SPIFFS_file_path); // debugging
-
-                // Free dynamic memory created for accel array 
-                free(SPIFFS_data.accel_magnitude);
-                SPIFFS_data.accel_magnitude = NULL;
-                packet->data.accel_magnitude = NULL; 
+                // Update the offset tracker
+                offset += written; 
             }
-            else {
-                // Create string of passed in data
-                char buffer[64];
-                sprintf(buffer, "%d,%d,%d\n", packet->test[0], packet->test[1], packet->test[2]);
 
-                // Write the data 
+            // Write any remaining data in the buffer
+            if (offset > 0) {
                 SPIFFS_Write(packet->SPIFFS_file_path, buffer);
             }
+
+            // Write the impact strength and rotation to the file 
+            SPIFFS_Write(packet->SPIFFS_file_path, "Impact Strength:\n"); 
+            sprintf(buffer, "%.1f\n", packet->data.impact_strength); 
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+
+            SPIFFS_Write(packet->SPIFFS_file_path, "Impact Rotation:\n"); 
+            sprintf(buffer, "%.1f\n", packet->data.impact_rotation); 
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+
+            SPIFFS_Write(packet->SPIFFS_file_path, "Max Rotation:\n"); 
+            sprintf(buffer, "%.1f\n", packet->data.max_rotation); 
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+
+            // SPIFFS_Print(packet->SPIFFS_file_path); // debugging
+
+            // Free dynamic memory created for accel array 
+            free(SPIFFS_data.impact_region);
+            SPIFFS_data.impact_region = NULL;
+            packet->data.impact_region = NULL; 
             
             // Give up the semaphore 
             packet->active = false;

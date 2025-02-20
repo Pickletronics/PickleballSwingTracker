@@ -27,6 +27,10 @@
 #define SPIFFS_WRITE_TAG "SPIFFS_WRITE"
 #define PLAY_SESSION_TAG "PLAY_SESSION"
 
+#define NUM_SAMPLES_PRE_IMPACT        150
+#define NUM_SAMPLES_IMPACT            150
+#define NUM_SAMPLES_TOTAL             NUM_SAMPLES_PRE_IMPACT + NUM_SAMPLES_IMPACT
+
 /*************************************Defines***************************************/
 
 /***********************************Externs*****************************************/
@@ -62,10 +66,11 @@ typedef struct data_processing_packet_t {
 
 typedef struct SPIFFS_write_data_t {
     uint32_t num_samples;
-    float* accel_magnitude; 
+    float* impact_region; 
     float impact_strength; 
     float impact_rotation; 
-} SPIFFS_write_data_t; 
+    float max_rotation; 
+} SPIFFS_write_data_t;
 
 typedef struct SPIFFS_packet_t {
     char* SPIFFS_file_path;
