@@ -100,10 +100,6 @@ static void MPU9250_read_magnetometer() {
         mpu.mag.y = (int16_t)((data[3] << 8) | data[2]);
         mpu.mag.z = (int16_t)((data[5] << 8) | data[4]);
 
-        // printf("x: %d\n", mpu.mag.x);
-        // printf("y: %d\n", mpu.mag.y);
-        // printf("z: %d\n\n", mpu.mag.z);
-
         AK8963_read(AK8963_ST2); // read to finish
     }
 }
@@ -166,7 +162,7 @@ bool MPU9250_Init() {
 
     /* initialize gyro */
     temp = MPU9250_read(GYRO_CFG);
-    temp |= 0x08; // +/- 500 dps
+    temp |= 0x0C; // +/- 2000 dps
     MPU9250_write(GYRO_CFG, temp);
     temp = 0;
 

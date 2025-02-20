@@ -20,6 +20,7 @@
 #define MPU9250_CS              GPIO_NUM_5
 #define MPU9250_MAX_CLK         1000000
 #define ACCEL_SENSITIVITY       (16.0f * 9.81f / 32768.0f)
+#define GYRO_SENSITIVITY        (2000.0 / 32768.0f)
 
 // MPU9250 registers
 #define MPU9250_WHOAMI          117
