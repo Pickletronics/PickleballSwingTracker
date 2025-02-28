@@ -62,7 +62,6 @@ void Button_Init() {
     io_conf.pin_bit_mask = (1ULL << BUTTON_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;    // Enable internal pull-up
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
 
     ret = gpio_config(&io_conf);
     if (ret != ESP_OK) {
@@ -71,7 +70,8 @@ void Button_Init() {
     }
 
     // Install ISR service and add ISR handler
-    ret = gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
+    // ret = gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
+    ret = gpio_install_isr_service(0);
     if (ret != ESP_OK) {
         // Handle error if ISR service fails to install
         printf("Failed to install ISR service: %s\n", esp_err_to_name(ret));
@@ -89,7 +89,7 @@ void Button_Init() {
     Button_sem = xSemaphoreCreateBinary();
 
     // start button task
-    xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
+    xTaskCreate(Button_task, "Button_task", 2048, NULL, 1, NULL);
 }
 
 void Button_task(void *args) {
@@ -99,7 +99,7 @@ void Button_task(void *args) {
 
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
-            
+            printf("entering!\n");
             // Debounce button press
             vTaskDelay(debounce_time);
             press_time = xTaskGetTickCount();
@@ -157,7 +157,8 @@ bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm
     // return true;
 }
 
-void Button_ISR() {
+void IRAM_ATTR Button_ISR() {
+    // gpio_set_level(15, 0);
     if (!hold_detected)
     {
         // Disable the GPIO interrupt for the button
@@ -165,6 +166,7 @@ void Button_ISR() {
         // Give the semaphore to notify button task
         xSemaphoreGiveFromISR(Button_sem, NULL);
     }
+
 }
 
 
