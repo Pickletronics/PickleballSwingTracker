@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "button.h": "c"
+        "button.h": "c",
+        "task.h": "c",
+        "led.h": "c",
+        "fsm.h": "c"
     }
 }
