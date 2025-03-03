@@ -15,7 +15,7 @@ long dump_position = 0;
 
 /********************************Public Functions***********************************/
 
-void SPIFFS_init() {
+void SPIFFS_Init() {
     esp_vfs_spiffs_conf_t conf = {
         .base_path = "/spiffs",   
         .partition_label = "spiffs", 
@@ -27,9 +27,9 @@ void SPIFFS_init() {
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
-            ESP_LOGI(SPIFFS_TAG, "Failed to mount or format SPIFFS");
+            ESP_LOGE(SPIFFS_TAG, "Failed to mount or format SPIFFS");
         } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGI(SPIFFS_TAG, "SPIFFS partition not found");
+            ESP_LOGE(SPIFFS_TAG, "SPIFFS partition not found");
         } else {
             ESP_LOGE(SPIFFS_TAG,"Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
@@ -77,7 +77,7 @@ void SPIFFS_Print(const char *path){
 
     while ((bytesRead = fread(buffer, 1, sizeof(buffer) - 1, f)) > 0) {
         buffer[bytesRead] = '\0'; 
-        // ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer); // debugging
+        ESP_LOGI(SPIFFS_TAG, "Read from file: %s", buffer);
     }
 
     fclose(f);

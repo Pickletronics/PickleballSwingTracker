@@ -31,7 +31,7 @@ void app_main(void) {
     LED_init();
     SPI_Init(); 
     assert(MPU9250_Init());
-    SPIFFS_init(); 
+    SPIFFS_Init(); 
     Button_Init();
 
     // const gpio_num_t LED_PIN = 15;
