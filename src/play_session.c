@@ -48,7 +48,7 @@ void Play_Session_task(void *args) {
     // demo led init
     const TickType_t LED_on_time = pdMS_TO_TICKS(500);
     TickType_t last_impact_time = 0;
-    const gpio_num_t LED_PIN = 2;
+    const gpio_num_t LED_PIN = 15;
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
 
@@ -132,10 +132,10 @@ void Play_Session_task(void *args) {
 
         // FIXME: for demo, turn on briefly
         if (xTaskGetTickCount() - last_impact_time < LED_on_time) {
-            gpio_set_level(LED_PIN, 1);
+            gpio_set_level(LED_PIN, 0);
         }
         else {
-            gpio_set_level(LED_PIN, 0);
+            gpio_set_level(LED_PIN, 1);
         }
 
         // send impact to processing thread
@@ -168,7 +168,7 @@ void Play_Session_task(void *args) {
 
                     // spawn data processing thread
                     // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
-                    xTaskCreatePinnedToCore(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 1, NULL, 1);                 
+                    xTaskCreate(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 1, NULL);                 
                 }
 
                 // reset necessary variables
@@ -289,7 +289,7 @@ void Process_Data_task(void *args) {
                 SPIFFS_packets[packet_index].data = SPIFFS_data; 
 
                 // spawn data processing thread
-                xTaskCreatePinnedToCore(SPIFFS_Write_task, "SPIFFS_Write_task", 8192, (void *)&SPIFFS_packets[packet_index], 1, NULL, 1);
+                xTaskCreate(SPIFFS_Write_task, "SPIFFS_Write_task", 8192, (void *)&SPIFFS_packets[packet_index], 1, NULL);
             
 
         }

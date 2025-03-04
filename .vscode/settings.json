@@ -1,32 +1,8 @@
 {
     "files.associations": {
-        "uart.h": "c",
-        "stdint.h": "c",
-        "freertos.h": "c",
-        "threads.h": "c",
-        "cstdint": "cpp",
-        "lsm6dsl.h": "c",
-        "mpu9250.h": "c",
-        "spi.h": "c",
-        "array": "c",
-        "string": "c",
-        "string_view": "c",
-        "task.h": "c",
-        "freertosconfig.h": "c",
         "button.h": "c",
-        "algorithm": "c",
-        "*.tcc": "c",
-        "ctime": "c",
-        "limits": "c",
-        "numeric": "c",
-        "ratio": "c",
-        "streambuf": "c",
-        "tuple": "c",
-        "type_traits": "c",
-        "ble.h": "c",
+        "task.h": "c",
         "led.h": "c",
-        "spiffs.h": "c",
-        "circular_buffer.h": "c",
         "fsm.h": "c"
     }
 }

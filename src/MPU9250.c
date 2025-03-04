@@ -117,11 +117,7 @@ bool MPU9250_Init() {
         .queue_size = 7,
     };
 
-    esp_err_t ret = spi_bus_add_device(SPI_NUM, &MPU9250cfg, &spi_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGE(IMU_TAG,"Failed to add device to SPI bus: %s\n", esp_err_to_name(ret));
-        return false;
-    }
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI_NUM, &MPU9250cfg, &spi_handle));
 
     // Configure Chip Select
     gpio_set_direction(MPU9250_CS, GPIO_MODE_OUTPUT);
@@ -144,7 +140,7 @@ bool MPU9250_Init() {
             ESP_LOGE(IMU_TAG, "MPU6500 dectected; No magnetometer.");
         }
         else {
-            ESP_LOGE(IMU_TAG, "Incorrect IMU dectected.");
+            ESP_LOGE(IMU_TAG, "Incorrect IMU dectected. WHO_AM_I: 0x%02X", temp);
             return false;
         }
         
@@ -203,55 +199,55 @@ void MPU9250_update() {
 
 /**********************************Test Threads*************************************/
 
-void MPU9250_plot_accel() {
-    while(1) {
-        MPU9250_update();
+// void MPU9250_plot_accel() {
+//     while(1) {
+//         MPU9250_update();
 
-        // output data over uart
-        char accel[6] = {
-            (mpu.accel.x >> 8) & 0xFF,
-            (mpu.accel.x) & 0xFF,
-            (mpu.accel.y >> 8) & 0xFF,
-            (mpu.accel.y) & 0xFF,
-            (mpu.accel.z >> 8) & 0xFF,
-            (mpu.accel.z) & 0xFF,
-        };
+//         // output data over uart
+//         char accel[6] = {
+//             (mpu.accel.x >> 8) & 0xFF,
+//             (mpu.accel.x) & 0xFF,
+//             (mpu.accel.y >> 8) & 0xFF,
+//             (mpu.accel.y) & 0xFF,
+//             (mpu.accel.z >> 8) & 0xFF,
+//             (mpu.accel.z) & 0xFF,
+//         };
 
-        UART_write(accel, 6);
-    }
-}
+//         UART_write(accel, 6);
+//     }
+// }
 
-void MPU9250_plot_accel_mag() {
-    while(1) {
-        MPU9250_update();
+// void MPU9250_plot_accel_mag() {
+//     while(1) {
+//         MPU9250_update();
 
-        // output data over uart
-        uint16_t mag_accel = sqrtf(mpu.accel.x * mpu.accel.x + mpu.accel.y * mpu.accel.y + mpu.accel.z * mpu.accel.z);
-        char accel[2] = {
-            (mag_accel >> 8) & 0xFF,
-            (mag_accel) & 0xFF,
-        };
+//         // output data over uart
+//         uint16_t mag_accel = sqrtf(mpu.accel.x * mpu.accel.x + mpu.accel.y * mpu.accel.y + mpu.accel.z * mpu.accel.z);
+//         char accel[2] = {
+//             (mag_accel >> 8) & 0xFF,
+//             (mag_accel) & 0xFF,
+//         };
 
-        UART_write(accel, 2);
-    }
-}
+//         UART_write(accel, 2);
+//     }
+// }
 
-void MPU9250_plot_gyro() {
-    while(1) {
-        MPU9250_update();
+// void MPU9250_plot_gyro() {
+//     while(1) {
+//         MPU9250_update();
 
-        // output data over uart
-        char gyro[6] = {
-            (mpu.gyro.x >> 8) & 0xFF,
-            (mpu.gyro.x) & 0xFF,
-            (mpu.gyro.y >> 8) & 0xFF,
-            (mpu.gyro.y) & 0xFF,
-            (mpu.gyro.z >> 8) & 0xFF,
-            (mpu.gyro.z) & 0xFF,
-        };
+//         // output data over uart
+//         char gyro[6] = {
+//             (mpu.gyro.x >> 8) & 0xFF,
+//             (mpu.gyro.x) & 0xFF,
+//             (mpu.gyro.y >> 8) & 0xFF,
+//             (mpu.gyro.y) & 0xFF,
+//             (mpu.gyro.z >> 8) & 0xFF,
+//             (mpu.gyro.z) & 0xFF,
+//         };
 
-        UART_write(gyro, 6);
-    }
-}
+//         UART_write(gyro, 6);
+//     }
+// }
 
 /**********************************Test Threads*************************************/

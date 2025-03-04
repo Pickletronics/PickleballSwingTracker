@@ -2,10 +2,14 @@
 
 /************************************Includes***************************************/
 
-#include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "play_session.h"
+#include <stdint.h>
+
+#include "LED.h"
+#include "SPI.h"
+#include "MPU9250.h"
+#include "button.h"
 #include "FSM.h"
 
 /************************************Includes***************************************/
@@ -26,9 +30,14 @@ void app_main(void) {
     UART_init();
     LED_init();
     SPI_Init(); 
-    MPU9250_Init();
-    SPIFFS_init(); 
+    assert(MPU9250_Init());
+    SPIFFS_Init(); 
     Button_Init();
+
+    // const gpio_num_t LED_PIN = 15;
+    // gpio_reset_pin(LED_PIN);
+    // gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+    // gpio_set_level(LED_PIN, 1);
 
     // Initialize semaphores
     SPI_sem = xSemaphoreCreateMutex();
@@ -37,7 +46,7 @@ void app_main(void) {
 
     // Spawn threads
     // xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(FSM_task, "FSM_task", 4096, NULL, 1, NULL, 1);
+    xTaskCreate(FSM_task, "FSM_task", 4096, NULL, 1, NULL);
 
     // Plot threads
     // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);

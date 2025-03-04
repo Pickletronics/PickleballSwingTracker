@@ -34,19 +34,19 @@ static void Button_Timer_Init(){
         .direction = GPTIMER_COUNT_UP,
         .resolution_hz = TIMER_RES, 
     };
-    gptimer_new_timer(&timer_config, &Button_timer);
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &Button_timer));
 
     gptimer_event_callbacks_t cbs = {
         .on_alarm = Button_Timer_Callback,
     };
-    gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue);
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(Button_timer, &cbs, Button_queue));
 
-    gptimer_enable(Button_timer);
+    ESP_ERROR_CHECK(gptimer_enable(Button_timer));
 
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = ALARM_COUNT,
     };
-    gptimer_set_alarm_action(Button_timer, &alarm_config);
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(Button_timer, &alarm_config));
 }
 
 /********************************Static Functions**********************************/
@@ -54,34 +54,18 @@ static void Button_Timer_Init(){
 /********************************Public Functions***********************************/
 
 void Button_Init() {
-    esp_err_t ret;
-
     // Configure the button GPIO as input
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_NEGEDGE;      // Trigger on falling edge
     io_conf.pin_bit_mask = (1ULL << BUTTON_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;    // Enable internal pull-up
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
 
-    ret = gpio_config(&io_conf);
-    if (ret != ESP_OK) {
-        // Handle error if ISR service fails to install
-        printf("Failed to configure GPIO %d: %s\n", BUTTON_PIN, esp_err_to_name(ret));
-    }
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
 
     // Install ISR service and add ISR handler
-    ret = gpio_install_isr_service(ESP_INTR_FLAG_EDGE);
-    if (ret != ESP_OK) {
-        // Handle error if ISR service fails to install
-        printf("Failed to install ISR service: %s\n", esp_err_to_name(ret));
-    }
-
-    ret = gpio_isr_handler_add(BUTTON_PIN, Button_ISR, NULL);
-    if (ret != ESP_OK) {
-        // Handle error if ISR handler fails to add
-        printf("Failed to add ISR handler: %s\n", esp_err_to_name(ret));
-    }
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(BUTTON_PIN, Button_ISR, NULL));
 
     // Initialize the Timer/Counter for the Button
     Button_Timer_Init();
@@ -89,7 +73,7 @@ void Button_Init() {
     Button_sem = xSemaphoreCreateBinary();
 
     // start button task
-    xTaskCreatePinnedToCore(Button_task, "Button_task", 2048, NULL, 1, NULL, 1);
+    xTaskCreate(Button_task, "Button_task", 2048, NULL, 1, NULL);
 }
 
 void Button_task(void *args) {
@@ -99,7 +83,7 @@ void Button_task(void *args) {
 
     while (1) {
         if (xSemaphoreTake(Button_sem, portMAX_DELAY) == pdTRUE) {
-            
+
             // Debounce button press
             vTaskDelay(debounce_time);
             press_time = xTaskGetTickCount();
@@ -157,7 +141,8 @@ bool IRAM_ATTR Button_Timer_Callback(gptimer_handle_t timer, const gptimer_alarm
     // return true;
 }
 
-void Button_ISR() {
+void IRAM_ATTR Button_ISR() {
+    // gpio_set_level(15, 0);
     if (!hold_detected)
     {
         // Disable the GPIO interrupt for the button
@@ -165,6 +150,7 @@ void Button_ISR() {
         // Give the semaphore to notify button task
         xSemaphoreGiveFromISR(Button_sem, NULL);
     }
+
 }
 
 

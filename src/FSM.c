@@ -45,7 +45,7 @@ static void PLAY_SESSION_Enter(int8_t button_input, FSM_state_t* state_handler) 
             // create session task
             state_handler->play_session_active = true;
             LED_notify(BATTERY_LEVEL);
-            xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, &state_handler->Play_Session_Handle, 0);
+            xTaskCreate(Play_Session_task, "Session_task", 4096, NULL, 1, &state_handler->Play_Session_Handle);
             ESP_LOGI(FSM_TAG,"Play session started");
         }
         else {

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include "SPI.h"
-#include "UART.h"
+// #include "UART.h"
 #include <math.h>
 
 /************************************Includes***************************************/
@@ -17,7 +17,7 @@
 #define IMU_TAG "IMU"
 
 // configuration
-#define MPU9250_CS              GPIO_NUM_5
+#define MPU9250_CS              GPIO_NUM_17
 #define MPU9250_MAX_CLK         1000000
 #define ACCEL_SENSITIVITY       (16.0f * 9.81f / 32768.0f)
 #define GYRO_SENSITIVITY        (2000.0 / 32768.0f)
@@ -98,7 +98,7 @@ extern spi_device_handle_t spi_handle;
 
 /********************************Public Functions***********************************/
 
-bool MPU9250_Init(void);
+bool MPU9250_Init();
 void MPU9250_update();
 
 // PLOT FUNC SERIAL MONITOR SETTINGS:

@@ -16,7 +16,7 @@ spi_device_handle_t spi_handle;
 
 /********************************Public Functions***********************************/
 
-esp_err_t SPI_Init(){
+void SPI_Init() {
     // Configures the spi bus
     spi_bus_config_t buscfg = {
         .miso_io_num = PIN_NUM_MISO, 
@@ -27,12 +27,7 @@ esp_err_t SPI_Init(){
         .max_transfer_sz = 4096     
     };
 
-    esp_err_t ret = spi_bus_initialize(SPI_NUM, &buscfg, SPI_DMA_CH_AUTO);
-    if (ret != ESP_OK) {
-        printf("Failed to initialize SPI bus: %s\n", esp_err_to_name(ret));
-    }
-    
-    return ret;
+    ESP_ERROR_CHECK(spi_bus_initialize(SPI_NUM, &buscfg, SPI_DMA_CH_AUTO));
 }
 
 esp_err_t SPI_Select(uint8_t CS_num){
