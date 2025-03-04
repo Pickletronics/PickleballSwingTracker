@@ -28,11 +28,11 @@
 // D pin (longest) connects to GND
 
 // Battery thresholds with 1k/1k divider (divides by 2)
-#define BATTERY_MAX                 1850  // 3.7V/2
-#define BATTERY_MIN                 1600  // 3.2V/2
+#define BATTERY_MAX                 1850  // 3.7V
+#define BATTERY_MIN                 1700  // 3.3V
 
 // ADC config
-#define BATTERY_ADC_CHANNEL         ADC_CHANNEL_7
+#define BATTERY_ADC_CHANNEL         ADC_CHANNEL_5
 #define ADC_SAMPLES                 64
 #define ADC_ATTEN                   ADC_ATTEN_DB_12
 

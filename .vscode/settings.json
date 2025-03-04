@@ -3,6 +3,7 @@
         "button.h": "c",
         "task.h": "c",
         "led.h": "c",
-        "fsm.h": "c"
+        "fsm.h": "c",
+        "spiffs.h": "c"
     }
 }

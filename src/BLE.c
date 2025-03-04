@@ -8,7 +8,7 @@
 
 /********************************Public Variables***********************************/
 
-char *BLE_NAME = "BLE-Server";
+char *BLE_NAME = "Pickleball-Swing-Tracker";
 uint8_t ble_addr_type;
 uint8_t curr_session = 0;
 bool dumped = 0; 
