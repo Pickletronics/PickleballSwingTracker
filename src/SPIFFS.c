@@ -10,6 +10,7 @@
 
 // For SPIFFS read
 long dump_position = 0;
+bool SPIFFS_full = false;
 
 /********************************Public Variables***********************************/
 
@@ -110,6 +111,11 @@ size_t SPIFFS_Dump(const char *path, char *buffer, size_t read_size){
 }
 
 void SPIFFS_Write(const char *path, const char *data){
+    if (SPIFFS_full) {
+        ESP_LOGI(SPIFFS_TAG, "SPIFFS full");
+        return;
+    }
+
     // Append data to file
     FILE* f = fopen(path, "a");
     if (f == NULL) {
@@ -118,6 +124,8 @@ void SPIFFS_Write(const char *path, const char *data){
     }
     
     if(fprintf(f, data) < 0){
+        LED_notify(SPIFFS_FULL);
+        SPIFFS_full = true;
         ESP_LOGE(SPIFFS_TAG, "Failed to write data to file");
         fclose(f);
         return;
@@ -145,6 +153,7 @@ void SPIFFS_Delete(const char *path){
         ESP_LOGE(SPIFFS_TAG, "Failed to delete file %s", path);
     }
     dump_position = 0; 
+    SPIFFS_full = false;
 }
 /********************************Public Functions***********************************/
 

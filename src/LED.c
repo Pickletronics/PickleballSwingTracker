@@ -58,7 +58,7 @@ static uint32_t read_battery_voltage(void) {
 }
 
 static uint8_t calculate_battery_percentage(uint32_t voltage) {
-    uint32_t actual_voltage = voltage * 2;  // Convert to actual battery voltage
+    uint32_t actual_voltage = voltage; //* 2;  // Convert to actual battery voltage
     
     if (actual_voltage >= 3700) return 100;  // Cap at 100% for 3.7V and above
     if (actual_voltage <= 3200) return 0;    // 0% at 3.2V and below
@@ -74,27 +74,27 @@ static uint8_t calculate_battery_percentage(uint32_t voltage) {
 
 // RGB LED init
 void LED_init(void) {
-    // // ADC init
-    // adc_oneshot_unit_init_cfg_t init_config1 = {
-    //     .unit_id = ADC_UNIT_1,
-    //     .ulp_mode = ADC_ULP_MODE_DISABLE,
-    // };
-    // ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, &adc1_handle));
+    // ADC init
+    adc_oneshot_unit_init_cfg_t init_config1 = {
+        .unit_id = ADC_UNIT_1,
+        .ulp_mode = ADC_ULP_MODE_DISABLE,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, &adc1_handle));
 
-    // // ADC config
-    // adc_oneshot_chan_cfg_t config = {
-    //     .atten = ADC_ATTEN,
-    //     .bitwidth = ADC_BITWIDTH_DEFAULT,
-    // };
-    // ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, BATTERY_ADC_CHANNEL, &config));
+    // ADC config
+    adc_oneshot_chan_cfg_t config = {
+        .atten = ADC_ATTEN,
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, BATTERY_ADC_CHANNEL, &config));
 
-    // // ADC calibration config
-    // adc_cali_curve_fitting_config_t cali_config = {
-    //     .unit_id = ADC_UNIT_1,
-    //     .atten = ADC_ATTEN,
-    //     .bitwidth = ADC_BITWIDTH_DEFAULT,
-    // };
-    // ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cali_config, &adc_cali_handle));
+    // ADC calibration config
+    adc_cali_curve_fitting_config_t cali_config = {
+        .unit_id = ADC_UNIT_1,
+        .atten = ADC_ATTEN,
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+    };
+    ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cali_config, &adc_cali_handle));
 
     // Configure LED PWM timer
     ledc_timer_config_t ledc_timer = {
@@ -147,7 +147,7 @@ void LED_task(void *pvParameters) {
     enum LED_STATE led_state = START_UP;
 
     // battery status vars
-    // uint32_t adc_voltage;
+    uint32_t adc_voltage;
     uint8_t percentage = 0;
     
     while (1) {
@@ -193,10 +193,10 @@ void LED_task(void *pvParameters) {
 
             case BATTERY_LEVEL:
                 // solid green/yellow/red
-                // adc_voltage = read_battery_voltage();
-                // percentage = calculate_battery_percentage(adc_voltage);
+                adc_voltage = read_battery_voltage();
+                percentage = calculate_battery_percentage(adc_voltage);
                 
-                // ESP_LOGI(LED_TAG, "ADC: %lumV (Battery: %lumV) (%u%%)\r\n", adc_voltage, adc_voltage * 2, percentage);
+                // ESP_LOGI(LED_TAG, "ADC: %lumV (%u%%)\r\n", adc_voltage, percentage);
                 vTaskDelay(pdMS_TO_TICKS(500));
 
                 set_battery_led_status(percentage);

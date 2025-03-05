@@ -30,27 +30,27 @@ void Play_Session_task(void *args) {
     IMU_sample_t sample;
     uint32_t sample_count = 0;
 
-    // uint32_t num_samples = 0;
-    // TickType_t init_time_sec = xTaskGetTickCount();
-    // TickType_t curr_time_sec = xTaskGetTickCount();
-    // TickType_t one_sec = pdMS_TO_TICKS(pdTICKS_TO_MS(1000));
+    uint32_t num_samples = 0;
+    TickType_t init_time_sec = xTaskGetTickCount();
+    TickType_t curr_time_sec = xTaskGetTickCount();
+    TickType_t one_sec = pdMS_TO_TICKS(pdTICKS_TO_MS(1000));
 
     // circular buffer init
     Circular_Buffer_Init(IMU_BUFFER);
 
     // impact settings
-    const float IMPACT_CHANGE_THRESHOLD = 90.0f;
+    const float IMPACT_CHANGE_THRESHOLD = 77.0f;
     const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
+    TickType_t last_impact_time = 0;
     float prev_accel_magnitude = 0.0f;
     bool impact_detected = false;
     bool first_sample = true;
 
-    // demo led init
-    const TickType_t LED_on_time = pdMS_TO_TICKS(500);
-    TickType_t last_impact_time = 0;
+    // led init
     const gpio_num_t LED_PIN = 15;
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_PIN, 1);
 
     // session SPIFFS init
     char file_name[32];     
@@ -98,13 +98,13 @@ void Play_Session_task(void *args) {
         // write data
         Circular_Buffer_Write(IMU_BUFFER, sample);
 
-        // num_samples++;
-        // curr_time_sec = xTaskGetTickCount();
-        // if (curr_time_sec > init_time_sec + one_sec) {
-        //     // printf("%ld samples per second\n", num_samples);
-        //     num_samples = 0;
-        //     init_time_sec = xTaskGetTickCount();
-        // }
+        num_samples++;
+        curr_time_sec = xTaskGetTickCount();
+        if (curr_time_sec > init_time_sec + one_sec) {
+            printf("%ld samples per second\n", num_samples);
+            num_samples = 0;
+            init_time_sec = xTaskGetTickCount();
+        }
 
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
@@ -130,18 +130,11 @@ void Play_Session_task(void *args) {
         // Update the previous magnitude for the next iteration
         prev_accel_magnitude = accel_magnitude;
 
-        // FIXME: for demo, turn on briefly
-        if (xTaskGetTickCount() - last_impact_time < LED_on_time) {
-            gpio_set_level(LED_PIN, 0);
-        }
-        else {
-            gpio_set_level(LED_PIN, 1);
-        }
-
         // send impact to processing thread
         if (impact_detected) {
             // start counting samples to the right
             sample_count++;
+            gpio_set_level(LED_PIN, 0);
 
             // once desired number of samples, dump buffer and spawn processing thread
             if (sample_count >= NUM_SAMPLES_IMPACT) {
@@ -168,12 +161,13 @@ void Play_Session_task(void *args) {
 
                     // spawn data processing thread
                     // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
-                    xTaskCreate(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 1, NULL);                 
+                    xTaskCreate(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 2, NULL);                 
                 }
 
                 // reset necessary variables
                 sample_count = 0;
                 impact_detected = false;
+                gpio_set_level(LED_PIN, 1);
             }
         }
     }  
@@ -289,7 +283,7 @@ void Process_Data_task(void *args) {
                 SPIFFS_packets[packet_index].data = SPIFFS_data; 
 
                 // spawn data processing thread
-                xTaskCreate(SPIFFS_Write_task, "SPIFFS_Write_task", 8192, (void *)&SPIFFS_packets[packet_index], 1, NULL);
+                xTaskCreate(SPIFFS_Write_task, "SPIFFS_Write_task", 8192, (void *)&SPIFFS_packets[packet_index], 3, NULL);
             
 
         }

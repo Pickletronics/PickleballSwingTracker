@@ -20,8 +20,8 @@
 /*************************************Defines***************************************/
 
 #define MAX_PROCESSING_THREADS      3
-#define MAX_SPIFFS_THREADS          2*MAX_PROCESSING_THREADS
-#define MAX_PLAY_SESSIONS           5
+#define MAX_SPIFFS_THREADS          MAX_PROCESSING_THREADS
+#define MAX_PLAY_SESSIONS           10
 
 #define PROCESSING_TAG "PROCESSING"
 #define SPIFFS_WRITE_TAG "SPIFFS_WRITE"
