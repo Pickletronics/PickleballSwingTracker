@@ -62,6 +62,7 @@ typedef struct data_processing_packet_t {
     uint32_t num_samples;
     uint32_t impact_start_index;
     IMU_sample_t* processing_buffer;
+    TickType_t impact_time; 
 } data_processing_packet_t;
 
 typedef struct SPIFFS_write_data_t {
@@ -70,12 +71,12 @@ typedef struct SPIFFS_write_data_t {
     float impact_strength; 
     float impact_rotation; 
     float max_rotation; 
+    uint32_t impact_time; 
 } SPIFFS_write_data_t;
 
 typedef struct SPIFFS_packet_t {
     char* SPIFFS_file_path;
     bool active;
-    uint16_t test[3];
     SPIFFS_write_data_t data; 
 } SPIFFS_packet_t;
 

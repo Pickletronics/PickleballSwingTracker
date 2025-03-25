@@ -158,6 +158,7 @@ void Play_Session_task(void *args) {
                     play_session_packets[packet_index].num_samples = NUM_SAMPLES_TOTAL;
                     play_session_packets[packet_index].impact_start_index = NUM_SAMPLES_TOTAL - NUM_SAMPLES_IMPACT;
                     play_session_packets[packet_index].processing_buffer = Circular_Buffer_Sized_DDump(IMU_BUFFER, NUM_SAMPLES_TOTAL);
+                    play_session_packets[packet_index].impact_time = xTaskGetTickCount(); 
 
                     // spawn data processing thread
                     // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
@@ -229,6 +230,8 @@ void Process_Data_task(void *args) {
             
         }
 
+        SPIFFS_data.impact_time = pdTICKS_TO_MS(packet->impact_time);
+
         // UART dump to serial plot
         // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {   
         //      union {
@@ -274,9 +277,6 @@ void Process_Data_task(void *args) {
             printf("Max SPIFFS packets being processed.\n");
         }
         else {
-
-                srand((unsigned int)xTaskGetTickCount());
-
                 // populate data processing buffer
                 SPIFFS_packets[packet_index].SPIFFS_file_path = packet->SPIFFS_file_path;
                 SPIFFS_packets[packet_index].active = true;
@@ -348,6 +348,10 @@ void SPIFFS_Write_task(void *args){
 
             SPIFFS_Write(packet->SPIFFS_file_path, "Max Rotation:\n"); 
             sprintf(buffer, "%.1f\n", packet->data.max_rotation); 
+            SPIFFS_Write(packet->SPIFFS_file_path, buffer);
+
+            SPIFFS_Write(packet->SPIFFS_file_path, "Time:\n"); 
+            sprintf(buffer, "%ld\n", packet->data.impact_time); 
             SPIFFS_Write(packet->SPIFFS_file_path, buffer);
 
             // SPIFFS_Print(packet->SPIFFS_file_path); // debugging
