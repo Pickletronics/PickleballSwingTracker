@@ -15,6 +15,14 @@ def get_file(root: tkinter.Tk, prompt: str):
     else:
         quit()
 
+def remove_newlines(file_path):
+    """Opens a file, removes all newline characters, and writes back the modified content."""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read().replace('\n', '')
+
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(content)
+
 def parse_file(input_file, output_file_name):
     lines = input_file.readlines()
     impacts = []
@@ -59,4 +67,5 @@ if __name__ == "__main__":
     out_file_name += ".csv"
     print("Creating output file:", out_file_name)
 
+    remove_newlines(in_file) # remove newlines to account for BLE chunks
     parse_file(in_file, out_file_name)
