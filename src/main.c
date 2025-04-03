@@ -31,6 +31,7 @@ void app_main(void) {
     LED_init();
     SPI_Init(); 
     assert(MPU9250_Init());
+    // MPU9250_Init();
     SPIFFS_Init(); 
     Button_Init();
 

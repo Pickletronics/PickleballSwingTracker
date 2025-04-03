@@ -13,7 +13,6 @@
 
 void UART_init() {
     uart_config_t uart_config = {
-        // .baud_rate = 460800,
         .baud_rate = 115200,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,

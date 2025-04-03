@@ -174,7 +174,7 @@ bool MPU9250_Init() {
             ESP_LOGI(IMU_TAG, "AK8963 dectected.");
         }
         else {
-            ESP_LOGE(IMU_TAG, "AK8963 not dectected.");
+            ESP_LOGE(IMU_TAG, "AK8963 not dectected. WHO_AM_I: 0x%02X", temp);
             return false;
         }
 
@@ -199,55 +199,58 @@ void MPU9250_update() {
 
 /**********************************Test Threads*************************************/
 
-// void MPU9250_plot_accel() {
-//     while(1) {
-//         MPU9250_update();
+void MPU9250_plot_accel() {
+    while(1) {
+        MPU9250_update();
 
-//         // output data over uart
-//         char accel[6] = {
-//             (mpu.accel.x >> 8) & 0xFF,
-//             (mpu.accel.x) & 0xFF,
-//             (mpu.accel.y >> 8) & 0xFF,
-//             (mpu.accel.y) & 0xFF,
-//             (mpu.accel.z >> 8) & 0xFF,
-//             (mpu.accel.z) & 0xFF,
-//         };
+        // output data over uart
+        char accel[6] = {
+            (mpu.accel.x >> 8) & 0xFF,
+            (mpu.accel.x) & 0xFF,
+            (mpu.accel.y >> 8) & 0xFF,
+            (mpu.accel.y) & 0xFF,
+            (mpu.accel.z >> 8) & 0xFF,
+            (mpu.accel.z) & 0xFF,
+        };
 
-//         UART_write(accel, 6);
-//     }
-// }
+        UART_write(accel, 6);
+    }
+}
 
-// void MPU9250_plot_accel_mag() {
-//     while(1) {
-//         MPU9250_update();
+void MPU9250_plot_accel_mag() {
+    while(1) {
+        MPU9250_update();
 
-//         // output data over uart
-//         uint16_t mag_accel = sqrtf(mpu.accel.x * mpu.accel.x + mpu.accel.y * mpu.accel.y + mpu.accel.z * mpu.accel.z);
-//         char accel[2] = {
-//             (mag_accel >> 8) & 0xFF,
-//             (mag_accel) & 0xFF,
-//         };
+        // output data over uart
+        uint16_t mag_accel = sqrtf(mpu.accel.x * mpu.accel.x + mpu.accel.y * mpu.accel.y + mpu.accel.z * mpu.accel.z);
+        char accel[2] = {
+            (mag_accel >> 8) & 0xFF,
+            (mag_accel) & 0xFF,
+        };
 
-//         UART_write(accel, 2);
-//     }
-// }
+        printf("%u\n",mag_accel);
+        // putchar(accel[0]);
+        // putchar(accel[1]);
+        // UART_write(accel, 2);
+    }
+}
 
-// void MPU9250_plot_gyro() {
-//     while(1) {
-//         MPU9250_update();
+void MPU9250_plot_gyro() {
+    while(1) {
+        MPU9250_update();
 
-//         // output data over uart
-//         char gyro[6] = {
-//             (mpu.gyro.x >> 8) & 0xFF,
-//             (mpu.gyro.x) & 0xFF,
-//             (mpu.gyro.y >> 8) & 0xFF,
-//             (mpu.gyro.y) & 0xFF,
-//             (mpu.gyro.z >> 8) & 0xFF,
-//             (mpu.gyro.z) & 0xFF,
-//         };
+        // output data over uart
+        char gyro[6] = {
+            (mpu.gyro.x >> 8) & 0xFF,
+            (mpu.gyro.x) & 0xFF,
+            (mpu.gyro.y >> 8) & 0xFF,
+            (mpu.gyro.y) & 0xFF,
+            (mpu.gyro.z >> 8) & 0xFF,
+            (mpu.gyro.z) & 0xFF,
+        };
 
-//         UART_write(gyro, 6);
-//     }
-// }
+        UART_write(gyro, 6);
+    }
+}
 
 /**********************************Test Threads*************************************/

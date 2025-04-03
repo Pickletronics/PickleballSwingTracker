@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include "SPI.h"
-// #include "UART.h"
+#include "UART.h"
 #include <math.h>
 
 /************************************Includes***************************************/

@@ -19,6 +19,8 @@
 
 /*************************************Defines***************************************/
 
+#define WINDOW_SIZE 7
+
 #define MAX_PROCESSING_THREADS      3
 #define MAX_SPIFFS_THREADS          MAX_PROCESSING_THREADS
 #define MAX_PLAY_SESSIONS           10
@@ -93,6 +95,8 @@ extern SPIFFS_files_t SPIFFS_files;
 void Play_Session_task(void *args); 
 void Process_Data_task(void *args); 
 void SPIFFS_Write_task(void *args);
+
+void moving_average_filter(float *data);
 
 /********************************Public Functions***********************************/
 

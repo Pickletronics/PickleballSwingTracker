@@ -22,6 +22,28 @@ SPIFFS_write_data_t SPIFFS_data;
 
 /********************************Public Functions***********************************/
 
+// FILTERS
+void moving_average_filter(float *data) {
+    float sum = 0.0;
+    int i;
+
+    // Compute initial window sum
+    for (i = 0; i < WINDOW_SIZE && i < NUM_SAMPLES_TOTAL; i++) {
+        sum += data[i];
+    }
+
+    // Apply moving average filter in-place
+    for (i = 0; i < NUM_SAMPLES_TOTAL - WINDOW_SIZE; i++) {
+        data[i] = sum / WINDOW_SIZE;
+        sum = sum - data[i] + data[i + WINDOW_SIZE];  // Slide window
+    }
+
+    // Handle the last few elements (optional: repeat last valid value)
+    for (; i < NUM_SAMPLES_TOTAL; i++) {
+        data[i] = sum / WINDOW_SIZE;
+    }
+}
+
 // Sampling task
 // Reads accelerometer and gyroscope data from IMU 
 // and pushes to buffer for processing
@@ -30,10 +52,10 @@ void Play_Session_task(void *args) {
     IMU_sample_t sample;
     uint32_t sample_count = 0;
 
-    uint32_t num_samples = 0;
-    TickType_t init_time_sec = xTaskGetTickCount();
-    TickType_t curr_time_sec = xTaskGetTickCount();
-    TickType_t one_sec = pdMS_TO_TICKS(pdTICKS_TO_MS(1000));
+    // uint32_t num_samples = 0;
+    // TickType_t init_time_sec = xTaskGetTickCount();
+    // TickType_t curr_time_sec = xTaskGetTickCount();
+    // TickType_t one_sec = pdMS_TO_TICKS(pdTICKS_TO_MS(1000));
 
     // circular buffer init
     Circular_Buffer_Init(IMU_BUFFER);
@@ -98,13 +120,13 @@ void Play_Session_task(void *args) {
         // write data
         Circular_Buffer_Write(IMU_BUFFER, sample);
 
-        num_samples++;
-        curr_time_sec = xTaskGetTickCount();
-        if (curr_time_sec > init_time_sec + one_sec) {
-            printf("%ld samples per second\n", num_samples);
-            num_samples = 0;
-            init_time_sec = xTaskGetTickCount();
-        }
+        // num_samples++;
+        // curr_time_sec = xTaskGetTickCount();
+        // if (curr_time_sec > init_time_sec + one_sec) {
+        //     printf("%ld samples per second\n", num_samples);
+        //     num_samples = 0;
+        //     init_time_sec = xTaskGetTickCount();
+        // }
 
         // Convert raw accelerometer values to m/s^2
         vector3D_t accel_real = {
@@ -162,7 +184,7 @@ void Play_Session_task(void *args) {
 
                     // spawn data processing thread
                     // ESP_LOGI(PLAY_SESSION_TAG, "Impact detected - Spawning processing thread");
-                    xTaskCreate(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 2, NULL);                 
+                    xTaskCreate(Process_Data_task, "Process_task", 8192, (void*)&play_session_packets[packet_index], 1, NULL);                 
                 }
 
                 // reset necessary variables
@@ -181,6 +203,7 @@ void Process_Data_task(void *args) {
 
     while (1) {
 
+        SPIFFS_data.impact_time = pdTICKS_TO_MS(packet->impact_time);
         SPIFFS_data.impact_region = (float*)malloc(NUM_SAMPLES_IMPACT * sizeof(float));
         for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
 
@@ -214,7 +237,14 @@ void Process_Data_task(void *args) {
             };
 
             rotation_axis[i] = fabs(gyro_real.z);
+            
+        }
 
+        // Filters
+        moving_average(rotation_axis, NUM_SAMPLES_TOTAL); // MAV to remove impact from gyro
+        SPIFFS_data.max_rotation = 0;
+        SPIFFS_data.impact_rotation = rotation_axis[packet->impact_start_index];
+        for (int i = 0; i < NUM_SAMPLES_TOTAL; i++) {
             // get max accel before impact
             if (i < packet->impact_start_index) {
                 // update max gyro axis
@@ -222,27 +252,21 @@ void Process_Data_task(void *args) {
                     SPIFFS_data.max_rotation = rotation_axis[i];
                 }
             }
-
-            // populate impact roation
-            if (i == packet->impact_start_index) {
-                SPIFFS_data.impact_rotation = rotation_axis[i];
-            }
-            
         }
+        
 
-        SPIFFS_data.impact_time = pdTICKS_TO_MS(packet->impact_time);
-
-        // UART dump to serial plot
+        // // UART dump to serial plot
         // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {   
         //      union {
         //         float real_data;
         //         uint32_t real_data_u32;
         //     } float_union; 
 
+        //     printf("@");
         //     for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
 
-        //         float_union.real_data = accel_magnitude[i];
-        //         // float_union.real_data = rotation_axis[i];
+        //         // float_union.real_data = accel_magnitude[i];
+        //         float_union.real_data = rotation_axis[i];
 
         //         // output data over uart
         //         char byte_data[4] = {
@@ -252,8 +276,10 @@ void Process_Data_task(void *args) {
         //             (float_union.real_data_u32 >> 24) & 0xFF
         //         };
 
-        //         UART_write(byte_data, 4);
+        //         // UART_write(byte_data, 4);
+        //         printf("%.2f,",float_union.real_data);
         //     }
+        //     printf("#");
 
         //     // Give up the semaphore 
         //     xSemaphoreGive(UART_sem);
@@ -369,3 +395,5 @@ void SPIFFS_Write_task(void *args){
         }
     }
 }
+
+/********************************Public Functions***********************************/
