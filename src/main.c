@@ -30,8 +30,8 @@ void app_main(void) {
     UART_init();
     LED_init();
     SPI_Init(); 
-    assert(MPU9250_Init());
-    // MPU9250_Init();
+    // assert(MPU9250_Init());
+    MPU9250_Init();
     SPIFFS_Init(); 
     Button_Init();
 
@@ -48,9 +48,4 @@ void app_main(void) {
     // Spawn threads
     // xTaskCreatePinnedToCore(Play_Session_task, "Session_task", 4096, NULL, 1, NULL, 0);
     xTaskCreate(FSM_task, "FSM_task", 4096, NULL, 1, NULL);
-
-    // Plot threads
-    // xTaskCreate(MPU9250_plot_accel, "Serial_Plot", 2048, NULL, 1, NULL);
-    // xTaskCreate(MPU9250_plot_accel_mag, "Serial_Plot", 2048, NULL, 1, NULL);
-    // xTaskCreate(MPU9250_plot_gyro, "Serial_Plot", 2048, NULL, 1, NULL);
 }

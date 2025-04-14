@@ -145,6 +145,7 @@ void LED_init(void) {
 
 void LED_task(void *pvParameters) {
     enum LED_STATE led_state = START_UP;
+    enum LED_STATE prev_state = START_UP;
 
     // battery status vars
     uint32_t adc_voltage;
@@ -153,6 +154,7 @@ void LED_task(void *pvParameters) {
     while (1) {
         uint32_t notification;
         if (xTaskNotifyWait(0, 0, &notification, 0) == pdTRUE) {
+            prev_state = led_state;
             led_state = (enum LED_STATE) notification;
             // ESP_LOGI(LED_TAG, "Notification: %ld\n", notification);
         }
@@ -197,9 +199,15 @@ void LED_task(void *pvParameters) {
                 percentage = calculate_battery_percentage(adc_voltage);
                 
                 // ESP_LOGI(LED_TAG, "ADC: %lumV (%u%%)\r\n", adc_voltage, percentage);
-                vTaskDelay(pdMS_TO_TICKS(500));
+                vTaskDelay(pdMS_TO_TICKS(100));
 
                 set_battery_led_status(percentage);
+                break;
+
+            case BLINK:
+                set_RGB(0,0,0); // turn off led
+                vTaskDelay(pdMS_TO_TICKS(MED_BLINK));
+                led_state = prev_state; // set back to prev state
                 break;
 
             case SPIFFS_FULL:
