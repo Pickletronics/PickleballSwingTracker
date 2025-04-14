@@ -146,6 +146,7 @@ void Play_Session_task(void *args) {
             // Impact detected
             last_impact_time = xTaskGetTickCount();
             impact_detected = true;
+            LED_notify(BLINK);
             // printf("Imapct at %ld\n", last_impact_time);
         }
 
@@ -236,12 +237,12 @@ void Process_Data_task(void *args) {
                 packet->processing_buffer[i].IMU.gyro.z * GYRO_SENSITIVITY
             };
 
-            rotation_axis[i] = fabs(gyro_real.z);
+            rotation_axis[i] = fabs(gyro_real.x);
             
         }
 
         // Filters
-        moving_average(rotation_axis, NUM_SAMPLES_TOTAL); // MAV to remove impact from gyro
+        moving_average_filter(rotation_axis); // MAV to remove impact from gyro
         SPIFFS_data.max_rotation = 0;
         SPIFFS_data.impact_rotation = rotation_axis[packet->impact_start_index];
         for (int i = 0; i < NUM_SAMPLES_TOTAL; i++) {

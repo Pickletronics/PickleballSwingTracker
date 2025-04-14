@@ -38,6 +38,7 @@
 
 // blink control (delay time)
 #define SLOW_BLINK                  300
+#define MED_BLINK                   100
 #define FAST_BLINK                  35
 
 // color intensity control (out of 255)
@@ -57,6 +58,7 @@ enum LED_STATE {
     BLE_TRANSFER,
     BATTERY_LEVEL,
     SPIFFS_FULL,
+    BLINK,
     NUM_LED_STATES
 };
 
