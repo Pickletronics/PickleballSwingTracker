@@ -61,7 +61,7 @@ void Play_Session_task(void *args) {
     Circular_Buffer_Init(IMU_BUFFER);
 
     // impact settings
-    const float IMPACT_CHANGE_THRESHOLD = 77.0f;
+    const float IMPACT_CHANGE_THRESHOLD = 75.0f;
     const TickType_t IMPACT_BUFFER_TIME = pdMS_TO_TICKS(50);
     TickType_t last_impact_time = 0;
     float prev_accel_magnitude = 0.0f;
@@ -237,37 +237,34 @@ void Process_Data_task(void *args) {
                 packet->processing_buffer[i].IMU.gyro.z * GYRO_SENSITIVITY
             };
 
-            rotation_axis[i] = fabs(gyro_real.x);
+            rotation_axis[i] = fabs(gyro_real.z);
             
         }
 
         // Filters
         moving_average_filter(rotation_axis); // MAV to remove impact from gyro
         SPIFFS_data.max_rotation = 0;
-        SPIFFS_data.impact_rotation = rotation_axis[packet->impact_start_index];
-        for (int i = 0; i < NUM_SAMPLES_TOTAL; i++) {
-            // get max accel before impact
-            if (i < packet->impact_start_index) {
-                // update max gyro axis
-                if (rotation_axis[i] > SPIFFS_data.max_rotation) {
-                    SPIFFS_data.max_rotation = rotation_axis[i];
-                }
+        SPIFFS_data.impact_rotation = rotation_axis[packet->impact_start_index-WINDOW_SIZE-1];
+        for (int i = 0; i < packet->impact_start_index; i++) {
+            // update max gyro axis
+            if (rotation_axis[i] > SPIFFS_data.max_rotation) {
+                SPIFFS_data.max_rotation = rotation_axis[i];
             }
         }
         
 
-        // // UART dump to serial plot
+        // UART dump to serial plot
         // if (xSemaphoreTake(UART_sem, portMAX_DELAY) == pdTRUE) {   
         //      union {
         //         float real_data;
         //         uint32_t real_data_u32;
         //     } float_union; 
 
-        //     printf("@");
+        //     // printf("@");
         //     for (uint32_t i = 0; i < NUM_SAMPLES_TOTAL; i++) {
 
-        //         // float_union.real_data = accel_magnitude[i];
-        //         float_union.real_data = rotation_axis[i];
+        //         float_union.real_data = accel_magnitude[i];
+        //         // float_union.real_data = rotation_axis[i];
 
         //         // output data over uart
         //         char byte_data[4] = {
@@ -278,9 +275,13 @@ void Process_Data_task(void *args) {
         //         };
 
         //         // UART_write(byte_data, 4);
-        //         printf("%.2f,",float_union.real_data);
+        //         putchar(byte_data[0]);
+        //         putchar(byte_data[1]);
+        //         putchar(byte_data[2]);
+        //         putchar(byte_data[3]);
+        //         // printf("%.2f,",float_union.real_data);
         //     }
-        //     printf("#");
+        //     // printf("#");
 
         //     // Give up the semaphore 
         //     xSemaphoreGive(UART_sem);

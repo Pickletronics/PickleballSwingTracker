@@ -19,7 +19,7 @@
 
 /*************************************Defines***************************************/
 
-#define WINDOW_SIZE 7
+#define WINDOW_SIZE 5
 
 #define MAX_PROCESSING_THREADS      3
 #define MAX_SPIFFS_THREADS          MAX_PROCESSING_THREADS
